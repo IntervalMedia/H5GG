@@ -92,7 +92,9 @@ the GlobalView module of Floating APP requires these tweaks and may need to upda
 
 + [Plugin Development Guide](/pluginDemo/README.md) - Learn how to create H5GG plugins
 
-+ [Plugin Ideas](/PLUGIN_IDEAS.md) - 30+ useful plugin ideas for debugging and reverse engineering
++ [Plugin Ideas](/PLUGIN_IDEAS.md) - 32 useful plugin ideas for debugging and reverse engineering
+
++ [Plugin Quick Reference](/PLUGIN_QUICK_REFERENCE.md) - Find plugins by use case
 
 
 it's all completely free & open source! 
