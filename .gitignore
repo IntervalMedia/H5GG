@@ -17,3 +17,7 @@
 /ViewController.mm
 /viewdebug.m
 /pluginDemo/h5frida15.1.24/libfrida-core-15.1.24.a
+build_output/
+build_output_globalview/
+build_output_appstand/
+build_all_output/

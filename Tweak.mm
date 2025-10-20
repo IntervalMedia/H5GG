@@ -5,6 +5,8 @@
 #import <pthread.h>
 #include <dlfcn.h>
 
+#import "RootBridge/Headers/RootBridge.h"
+
 #include "Localized.h"
 
 //忽略一些警告
