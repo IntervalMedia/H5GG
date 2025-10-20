@@ -26,9 +26,16 @@ H5GG now includes [RootBridge](https://github.com/jjolano/RootBridge) for univer
 ✅ **Rootless** - /var/jb based jailbreaks (palera1n, Dopamine 2.0)  
 ✅ **Roothide** - Roothide jailbreak support
 
-**Build all three versions with one command:**
+**Build all modules for all three jailbreak types with one command:**
 ```bash
-./build-all-schemes.sh
+./build-all.sh
+```
+
+**Or build individual modules:**
+```bash
+./build-all-schemes.sh              # Main H5GG tweak
+cd globalview && ./build-all-schemes.sh   # GlobalView module
+cd appstand && ./build-all-schemes.sh     # AppStand module
 ```
 
 See [RootBridge/README.md](/RootBridge/README.md) for detailed build instructions.

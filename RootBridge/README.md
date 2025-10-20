@@ -11,9 +11,24 @@ RootBridge is an iOS developer framework that makes it possible to compile "univ
 
 ## Building for All Jailbreak Types
 
+### Build Everything (Recommended)
+
+To build all H5GG modules for all three jailbreak types:
+
+```bash
+./build-all.sh
+```
+
+This will build:
+- Main H5GG tweak
+- GlobalView module
+- AppStand module
+
+All packages will be collected in `build_all_output/` directory.
+
 ### Main H5GG Tweak
 
-To build H5GG for all three jailbreak types:
+To build only the main H5GG tweak for all three jailbreak types:
 
 ```bash
 ./build-all-schemes.sh
