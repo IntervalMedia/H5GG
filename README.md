@@ -18,6 +18,21 @@ and you can make your own tweak(dylib) by click one button, so easy!
 
 **For fuzzy search it is recommended to use: https://igg-server.herokuapp.com/**
 
+## Universal Jailbreak Support (NEW!)
+
+H5GG now includes [RootBridge](https://github.com/jjolano/RootBridge) for universal jailbreak compatibility:
+
+✅ **Rootfull** - Traditional rooted jailbreaks (checkra1n, unc0ver)  
+✅ **Rootless** - /var/jb based jailbreaks (palera1n, Dopamine 2.0)  
+✅ **Roothide** - Roothide jailbreak support
+
+**Build all three versions with one command:**
+```bash
+./build-all-schemes.sh
+```
+
+See [RootBridge/README.md](/RootBridge/README.md) for detailed build instructions.
+
 ## H5GG supported 4 modes to run:
 
 1. [inject H5GG.dylib to ipa for non-jailbreak devices](/packages/)
