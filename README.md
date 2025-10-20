@@ -86,7 +86,13 @@ the GlobalView module of Floating APP requires these tweaks and may need to upda
 
 
 
-## [H5GG JavaScript Engine Document](/h5gg-js-doc-en.js)
+## Documentation
+
++ [H5GG JavaScript Engine API Document](/h5gg-js-doc-en.js)
+
++ [Plugin Development Guide](/pluginDemo/README.md) - Learn how to create H5GG plugins
+
++ [Plugin Ideas](/PLUGIN_IDEAS.md) - 30+ useful plugin ideas for debugging and reverse engineering
 
 
 it's all completely free & open source! 
