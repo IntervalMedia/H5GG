@@ -149,12 +149,17 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
 -(void)setAction:(NSString*)name callback:(id)block
 {
+    // Check if handler is already registered to avoid duplicate registration
+    BOOL alreadyRegistered = (self.actions[name] != nil);
+    
     [self.actions setValue:block forKey:name];
     
-    // Register script message handler for WKWebView
-    [self.webView.configuration.userContentController addScriptMessageHandler:self name:name];
+    // Register script message handler for WKWebView (only if not already registered)
+    if (!alreadyRegistered) {
+        [self.webView.configuration.userContentController addScriptMessageHandler:self name:name];
+    }
     
-    // Also set in jscontext if available (for compatibility)
+    // Also set in jscontext if available (for compatibility with JSExport objects)
     if(self.jscontext) self.jscontext[name] = block;
 }
 
@@ -177,7 +182,21 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
     id callback = self.actions[message.name];
     if (callback) {
-        ((void (^)(id))callback)(message.body);
+        // Check if callback is a block or an object
+        if ([callback isKindOfClass:NSClassFromString(@"NSBlock")]) {
+            // It's a block, call it directly
+            ((void (^)(id))callback)(message.body);
+        } else {
+            // It's an object (like h5ggEngine) - this requires JSContext integration
+            // WKWebView doesn't natively support JSExport objects
+            // The object was likely meant to be exposed via JSContext
+            NSLog(@"Warning: Received message for object '%@' but WKWebView cannot directly expose JSExport objects. JSContext integration required.", message.name);
+            
+            // Store in jscontext if available for backwards compatibility
+            if (self.jscontext) {
+                self.jscontext[message.name] = callback;
+            }
+        }
     }
 }
 
@@ -218,16 +237,29 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
     [self.webView evaluateJavaScript:@"document.documentElement.style.webkitUserSelect='none';" completionHandler:nil];
 
     // Inject JavaScript bridge for registered actions
-    // Note: This creates wrapper functions that use WKScriptMessageHandler
-    // For complex objects like h5gg, JSContext integration may still be needed
+    // Note: Simple function callbacks can use WKScriptMessageHandler
+    // Complex objects like h5gg require JSContext integration (not fully supported in WKWebView)
     for (NSString *actionName in self.actions) {
-        NSString *jsCode = [NSString stringWithFormat:
-            @"if (typeof %@ === 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.%@) {"
-            @"  window.%@ = function(arg) {"
-            @"    window.webkit.messageHandlers.%@.postMessage(arg);"
-            @"  };"
-            @"}", actionName, actionName, actionName, actionName];
-        [self.webView evaluateJavaScript:jsCode completionHandler:nil];
+        id callback = self.actions[actionName];
+        
+        // Only create message handler wrappers for block callbacks
+        // Object callbacks (like h5ggEngine) need JSContext to work properly
+        if ([callback isKindOfClass:NSClassFromString(@"NSBlock")]) {
+            NSString *jsCode = [NSString stringWithFormat:
+                @"if (typeof %@ === 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.%@) {"
+                @"  window.%@ = function(arg) {"
+                @"    window.webkit.messageHandlers.%@.postMessage(arg);"
+                @"  };"
+                @"}", actionName, actionName, actionName, actionName];
+            [self.webView evaluateJavaScript:jsCode completionHandler:nil];
+        } else {
+            // For object callbacks, they need to be exposed via JSContext
+            // This is a limitation of WKWebView - it doesn't support JSExport directly
+            NSLog(@"Warning: Action '%@' is an object that requires JSContext integration", actionName);
+            if (self.jscontext) {
+                self.jscontext[actionName] = callback;
+            }
+        }
     }
 
     // Check for FastClick
