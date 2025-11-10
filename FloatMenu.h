@@ -26,6 +26,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
 @interface FloatMenu : UIView <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler>
 @property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) JSContext *jscontext;
 @property NSTimer* frontTimer;
 
 @property BOOL touchableAll;
@@ -41,6 +42,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
 -(void)setAction:(NSString*)name callback:(id)block;
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler;
+- (void)alert:(NSString*)message;
 
 @end
 //@interface CALayer()
@@ -78,6 +80,9 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
         }
 
         self.actions = [[NSMutableDictionary alloc] init];
+        
+        // Initialize jscontext to nil - will be set via JavaScriptCore bridge if needed
+        self.jscontext = nil;
     }
     return self;
 }
@@ -146,7 +151,15 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 {
     [self.actions setValue:block forKey:name];
     
+    // Register script message handler for WKWebView
+    [self.webView.configuration.userContentController addScriptMessageHandler:self name:name];
+    
+    // Also set in jscontext if available (for compatibility)
     if(self.jscontext) self.jscontext[name] = block;
+}
+
+- (void)alert:(NSString*)message {
+    [TopShow alert:Localized(@"提示") message:message];
 }
 
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
@@ -203,6 +216,19 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
     [self.webView evaluateJavaScript:@"document.body.style.webkitTouchCallout='none';" completionHandler:nil];
     [self.webView evaluateJavaScript:@"document.documentElement.style.webkitUserSelect='none';" completionHandler:nil];
+
+    // Inject JavaScript bridge for registered actions
+    // Note: This creates wrapper functions that use WKScriptMessageHandler
+    // For complex objects like h5gg, JSContext integration may still be needed
+    for (NSString *actionName in self.actions) {
+        NSString *jsCode = [NSString stringWithFormat:
+            @"if (typeof %@ === 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.%@) {"
+            @"  window.%@ = function(arg) {"
+            @"    window.webkit.messageHandlers.%@.postMessage(arg);"
+            @"  };"
+            @"}", actionName, actionName, actionName, actionName];
+        [self.webView evaluateJavaScript:jsCode completionHandler:nil];
+    }
 
     // Check for FastClick
     [self.webView evaluateJavaScript:@"typeof FastClick" completionHandler:^(id result, NSError *error) {
