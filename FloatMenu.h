@@ -16,6 +16,9 @@
 #include "ModalShow.h"
 #include "version.h"
 #import <WebKit/WebKit.h>
+#include "crossproc.h"
+#include <libgen.h>
+#include <sys/stat.h>
 
 INCTXT(INITIAL_JS, "initial.js");
 
@@ -248,6 +251,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
     
     id result = nil;
     NSError *error = nil;
+    BOOL isAsync = NO;
     
     @try {
         if ([method isEqualToString:@"require"]) {
@@ -287,17 +291,72 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
             result = [self.h5ggInstance getLocalScripts];
         }
         else if ([method isEqualToString:@"pickScriptFile"]) {
-            // This needs special handling for callback - will handle separately
-            NSLog(@"pickScriptFile not yet implemented in WKScriptMessageHandler bridge");
+            // Handle pickScriptFile with callback
+            isAsync = YES;
+            NSArray *types = (args.count > 0 && args[0] != [NSNull null]) ? args[0] : nil;
+            
+            [TopShow filePicker:types ?: @[@"public.executable", @"public.html"] callback:^(NSString* path) {
+                NSString *pathJSON = path ? [NSString stringWithFormat:@"\"%@\"", path] : @"null";
+                NSString *jsCallback = [NSString stringWithFormat:@"window.__h5gg_callbacks['%@'](%@);delete window.__h5gg_callbacks['%@'];",
+                                       callbackId, pathJSON, callbackId];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self.webView evaluateJavaScript:jsCallback completionHandler:nil];
+                });
+            }];
         }
         else if ([method isEqualToString:@"getRangesList"]) {
-            // filter parameter needs JSValue - simplified for now
+            // Convert filter string to nil if undefined/null
+            NSString *filter = (args.count > 0 && args[0] != [NSNull null]) ? args[0] : nil;
+            
+            // Call getRangesList with nil since we can't create JSValue here
+            // The implementation checks for undefined/toString, so we'll pass nil for undefined
             result = [self.h5ggInstance getRangesList:nil];
+            
+            // If filter is provided, we need to filter the results ourselves
+            if (filter && ![filter isEqualToString:@""]) {
+                NSMutableArray *filtered = [[NSMutableArray alloc] init];
+                for (NSDictionary *range in (NSArray*)result) {
+                    NSString *name = range[@"name"];
+                    if ([name rangeOfString:filter].location != NSNotFound || 
+                        [filter isEqualToString:@"0"]) {
+                        [filtered addObject:range];
+                        if ([filter isEqualToString:@"0"]) break;
+                    }
+                }
+                result = filtered;
+            }
         }
         else if ([method isEqualToString:@"getProcList"]) {
-            // filter parameter needs JSValue - simplified for now
-            result = nil; // getProcList returns JSValue which needs special handling
-            NSLog(@"getProcList not yet fully implemented in WKScriptMessageHandler bridge");
+            // Convert filter string to nil if undefined/null
+            NSString *filter = (args.count > 0 && args[0] != [NSNull null]) ? args[0] : nil;
+            
+            // getProcList returns JSValue which we can't use here
+            // Instead, we'll get the process list and filter it ourselves
+            NSArray* allproc = getRunningProcess();
+            if (allproc) {
+                NSMutableArray* newarr = [[NSMutableArray alloc] init];
+                
+                for (NSDictionary* proc in allproc) {
+                    char path[PATH_MAX] = {0};
+                    
+                    if (!proc_pidpath([[proc valueForKey:@"pid"] intValue], path, sizeof(path)))
+                        continue;
+                    
+                    if (strstr(path, "/private/var/") != path && strstr(path, "/var/") != path)
+                        continue;
+                    
+                    if (strstr(path, "/Application/") == NULL)
+                        continue;
+                    
+                    if (!filter || [filter isEqualToString:@""] || 
+                        [filter isEqualToString:[proc valueForKey:@"name"]]) {
+                        [newarr addObject:proc];
+                    }
+                }
+                result = newarr;
+            } else {
+                result = nil;
+            }
         }
         else if ([method isEqualToString:@"setTargetProc"]) {
             pid_t pid = [args[0] intValue];
@@ -314,8 +373,8 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
         error = [NSError errorWithDomain:@"h5gg" code:-1 userInfo:@{NSLocalizedDescriptionKey: exception.reason ?: @"Unknown error"}];
     }
     
-    // Send result back to JavaScript
-    if (callbackId) {
+    // Send result back to JavaScript (if not async)
+    if (!isAsync && callbackId) {
         NSString *resultJSON = @"null";
         if (result) {
             NSData *jsonData = [NSJSONSerialization dataWithJSONObject:result ?: @"" options:0 error:nil];
