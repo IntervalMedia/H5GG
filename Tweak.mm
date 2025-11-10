@@ -252,7 +252,7 @@ FloatMenu* initFloatMenu(UIWindow* win)
     //创建并初始化h5gg内存搜索引擎
     h5gg = [[h5ggEngine alloc] init];
     //将h5gg内存搜索引擎添加到H5的JS环境中以便JS可以调用
-    [floatH5 setAction:@"h5gg" callback:h5gg];
+    [floatH5 setH5ggEngine:h5gg];
     
     //隐藏悬浮菜单, 已废弃, 保持旧版API兼容
     [floatH5 setAction:@"closeMenu" callback:^{

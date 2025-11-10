@@ -24,9 +24,12 @@ static NSHashTable* g_webViews = nil;
 typedef id (*objc_method_pointer)(id,SEL,...);
 objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
+@class h5ggEngine;
+
 @interface FloatMenu : UIView <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler>
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) JSContext *jscontext;
+@property (nonatomic, strong) h5ggEngine *h5ggInstance;
 @property NSTimer* frontTimer;
 
 @property BOOL touchableAll;
@@ -41,6 +44,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 @property void(^reloadAction)(void);
 
 -(void)setAction:(NSString*)name callback:(id)block;
+-(void)setH5ggEngine:(h5ggEngine*)engine;
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler;
 - (void)alert:(NSString*)message;
 
@@ -167,6 +171,35 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
     [TopShow alert:Localized(@"提示") message:message];
 }
 
+- (void)setH5ggEngine:(h5ggEngine*)engine {
+    self.h5ggInstance = engine;
+    
+    // Register all h5gg method handlers
+    NSArray *h5ggMethods = @[
+        @"h5gg_require",
+        @"h5gg_setFloatTolerance", 
+        @"h5gg_searchNumber",
+        @"h5gg_searchNearby",
+        @"h5gg_getValue",
+        @"h5gg_setValue",
+        @"h5gg_editAll",
+        @"h5gg_getResults",
+        @"h5gg_getResultsCount",
+        @"h5gg_clearResults",
+        @"h5gg_getLocalScripts",
+        @"h5gg_pickScriptFile",
+        @"h5gg_getRangesList",
+        @"h5gg_getProcList",
+        @"h5gg_setTargetProc",
+        @"h5gg_loadPlugin",
+        @"h5gg_makeTweak"
+    ];
+    
+    for (NSString *methodName in h5ggMethods) {
+        [self.webView.configuration.userContentController addScriptMessageHandler:self name:methodName];
+    }
+}
+
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
     [self.webView evaluateJavaScript:javaScriptString completionHandler:completionHandler];
 }
@@ -180,6 +213,13 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 }
 
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
+    // Handle h5gg method calls
+    if ([message.name hasPrefix:@"h5gg_"] && self.h5ggInstance) {
+        [self handleH5ggMessage:message];
+        return;
+    }
+    
+    // Handle regular action callbacks
     id callback = self.actions[message.name];
     if (callback) {
         // Check if callback is a block or an object
@@ -197,6 +237,96 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
                 self.jscontext[message.name] = callback;
             }
         }
+    }
+}
+
+- (void)handleH5ggMessage:(WKScriptMessage *)message {
+    NSDictionary *body = message.body;
+    NSString *method = [message.name substringFromIndex:5]; // Remove "h5gg_" prefix
+    NSArray *args = body[@"args"];
+    NSString *callbackId = body[@"callbackId"];
+    
+    id result = nil;
+    NSError *error = nil;
+    
+    @try {
+        if ([method isEqualToString:@"require"]) {
+            double minver = [args[0] doubleValue];
+            result = @([self.h5ggInstance require:minver]);
+        }
+        else if ([method isEqualToString:@"setFloatTolerance"]) {
+            [self.h5ggInstance setFloatTolerance:args[0]];
+        }
+        else if ([method isEqualToString:@"searchNumber"]) {
+            [self.h5ggInstance searchNumber:args[0] param2:args[1] param3:args[2] param4:args[3]];
+        }
+        else if ([method isEqualToString:@"searchNearby"]) {
+            [self.h5ggInstance searchNearby:args[0] param2:args[1] param3:args[2]];
+        }
+        else if ([method isEqualToString:@"getValue"]) {
+            result = [self.h5ggInstance getValue:args[0] param2:args[1]];
+        }
+        else if ([method isEqualToString:@"setValue"]) {
+            result = @([self.h5ggInstance setValue:args[0] param2:args[1] param3:args[2]]);
+        }
+        else if ([method isEqualToString:@"editAll"]) {
+            result = @([self.h5ggInstance editAll:args[0] param3:args[1]]);
+        }
+        else if ([method isEqualToString:@"getResults"]) {
+            int maxCount = [args[0] intValue];
+            int skipCount = [args[1] intValue];
+            result = [self.h5ggInstance getResults:maxCount param1:skipCount];
+        }
+        else if ([method isEqualToString:@"getResultsCount"]) {
+            result = @([self.h5ggInstance getResultsCount]);
+        }
+        else if ([method isEqualToString:@"clearResults"]) {
+            [self.h5ggInstance clearResults];
+        }
+        else if ([method isEqualToString:@"getLocalScripts"]) {
+            result = [self.h5ggInstance getLocalScripts];
+        }
+        else if ([method isEqualToString:@"pickScriptFile"]) {
+            // This needs special handling for callback - will handle separately
+            NSLog(@"pickScriptFile not yet implemented in WKScriptMessageHandler bridge");
+        }
+        else if ([method isEqualToString:@"getRangesList"]) {
+            // filter parameter needs JSValue - simplified for now
+            result = [self.h5ggInstance getRangesList:nil];
+        }
+        else if ([method isEqualToString:@"getProcList"]) {
+            // filter parameter needs JSValue - simplified for now
+            result = nil; // getProcList returns JSValue which needs special handling
+            NSLog(@"getProcList not yet fully implemented in WKScriptMessageHandler bridge");
+        }
+        else if ([method isEqualToString:@"setTargetProc"]) {
+            pid_t pid = [args[0] intValue];
+            result = @([self.h5ggInstance setTargetProc:pid]);
+        }
+        else if ([method isEqualToString:@"loadPlugin"]) {
+            result = [self.h5ggInstance loadPlugin:args[0] path:args[1]];
+        }
+        else if ([method isEqualToString:@"makeTweak"]) {
+            result = [self.h5ggInstance makeTweak:args[0] with:args[1]];
+        }
+    }
+    @catch (NSException *exception) {
+        error = [NSError errorWithDomain:@"h5gg" code:-1 userInfo:@{NSLocalizedDescriptionKey: exception.reason ?: @"Unknown error"}];
+    }
+    
+    // Send result back to JavaScript
+    if (callbackId) {
+        NSString *resultJSON = @"null";
+        if (result) {
+            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:result ?: @"" options:0 error:nil];
+            if (jsonData) {
+                resultJSON = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+            }
+        }
+        
+        NSString *jsCallback = [NSString stringWithFormat:@"window.__h5gg_callbacks['%@'](%@);delete window.__h5gg_callbacks['%@'];",
+                               callbackId, resultJSON, callbackId];
+        [self.webView evaluateJavaScript:jsCallback completionHandler:nil];
     }
 }
 
@@ -236,14 +366,59 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
     [self.webView evaluateJavaScript:@"document.body.style.webkitTouchCallout='none';" completionHandler:nil];
     [self.webView evaluateJavaScript:@"document.documentElement.style.webkitUserSelect='none';" completionHandler:nil];
 
+    // Inject JavaScript bridge for h5gg if instance is set
+    if (self.h5ggInstance) {
+        NSString *h5ggBridge = @"(function() {"
+            @"  if (typeof window.h5gg !== 'undefined') return;"
+            @"  window.__h5gg_callbacks = {};"
+            @"  window.__h5gg_callback_id = 0;"
+            @"  "
+            @"  function createH5ggMethod(methodName, argCount) {"
+            @"    return function() {"
+            @"      var args = Array.prototype.slice.call(arguments, 0, argCount);"
+            @"      var callback = arguments[argCount];"
+            @"      var callbackId = null;"
+            @"      if (typeof callback === 'function') {"
+            @"        callbackId = 'cb_' + (++window.__h5gg_callback_id);"
+            @"        window.__h5gg_callbacks[callbackId] = callback;"
+            @"      }"
+            @"      window.webkit.messageHandlers['h5gg_' + methodName].postMessage({"
+            @"        args: args,"
+            @"        callbackId: callbackId"
+            @"      });"
+            @"    };"
+            @"  }"
+            @"  "
+            @"  window.h5gg = {"
+            @"    require: createH5ggMethod('require', 1),"
+            @"    setFloatTolerance: createH5ggMethod('setFloatTolerance', 1),"
+            @"    searchNumber: createH5ggMethod('searchNumber', 4),"
+            @"    searchNearby: createH5ggMethod('searchNearby', 3),"
+            @"    getValue: createH5ggMethod('getValue', 2),"
+            @"    setValue: createH5ggMethod('setValue', 3),"
+            @"    editAll: createH5ggMethod('editAll', 2),"
+            @"    getResults: createH5ggMethod('getResults', 2),"
+            @"    getResultsCount: createH5ggMethod('getResultsCount', 0),"
+            @"    clearResults: createH5ggMethod('clearResults', 0),"
+            @"    getLocalScripts: createH5ggMethod('getLocalScripts', 0),"
+            @"    pickScriptFile: createH5ggMethod('pickScriptFile', 2),"
+            @"    getRangesList: createH5ggMethod('getRangesList', 1),"
+            @"    getProcList: createH5ggMethod('getProcList', 1),"
+            @"    setTargetProc: createH5ggMethod('setTargetProc', 1),"
+            @"    loadPlugin: createH5ggMethod('loadPlugin', 2),"
+            @"    makeTweak: createH5ggMethod('makeTweak', 2)"
+            @"  };"
+            @"})();";
+        [self.webView evaluateJavaScript:h5ggBridge completionHandler:nil];
+    }
+
     // Inject JavaScript bridge for registered actions
     // Note: Simple function callbacks can use WKScriptMessageHandler
-    // Complex objects like h5gg require JSContext integration (not fully supported in WKWebView)
     for (NSString *actionName in self.actions) {
         id callback = self.actions[actionName];
         
         // Only create message handler wrappers for block callbacks
-        // Object callbacks (like h5ggEngine) need JSContext to work properly
+        // Skip h5gg as it's handled separately above
         if ([callback isKindOfClass:NSClassFromString(@"NSBlock")]) {
             NSString *jsCode = [NSString stringWithFormat:
                 @"if (typeof %@ === 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.%@) {"
@@ -252,9 +427,8 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
                 @"  };"
                 @"}", actionName, actionName, actionName, actionName];
             [self.webView evaluateJavaScript:jsCode completionHandler:nil];
-        } else {
-            // For object callbacks, they need to be exposed via JSContext
-            // This is a limitation of WKWebView - it doesn't support JSExport directly
+        } else if (![actionName isEqualToString:@"h5gg"]) {
+            // Log warning only for non-h5gg objects
             NSLog(@"Warning: Action '%@' is an object that requires JSContext integration", actionName);
             if (self.jscontext) {
                 self.jscontext[actionName] = callback;
