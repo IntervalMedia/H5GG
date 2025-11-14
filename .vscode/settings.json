@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        ".html": "html",
+        ".cpp": "cpp",
+        ".h": "header file",
+        ".xm": "theos tweak",
+        ".md": "readme",
+        ".m": "cpp",
+        "__string": "cpp",
+        "__locale": "cpp",
+        "regex": "cpp",
+        "bitset": "cpp",
+        "string_view": "cpp"
+    }
+}

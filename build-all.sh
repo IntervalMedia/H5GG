@@ -78,3 +78,4 @@ echo -e "\n${GREEN}Installation instructions:${NC}"
 echo -e "  1. Transfer the appropriate .deb file to your device"
 echo -e "  2. Install with: ${YELLOW}dpkg -i <package-name>.deb${NC}"
 echo -e "  3. Or use your package manager (Cydia, Sileo, Zebra, etc.)\n"
+ 
