@@ -11,6 +11,7 @@
 
 #import <sys/sysctl.h>
 #import <mach-o/dyld_images.h>
+#import <mach-o/loader.h>
 
 extern "C" {
 #include "dyld64.h"

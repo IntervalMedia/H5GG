@@ -78,10 +78,10 @@ GVData* PGVSharedData = &StaticGVSharedData;
 //嵌入图标文件
 INCBIN(Icon, "icon.png");
 //嵌入菜单H5文件
-INCTXT(Menu, "Index.html");
-INCTXT(MenuEn, "Index-en.html");
+INCTXT(Menu, "RootBridge/Index.html");
+INCTXT(MenuEn, "RootBridge/Index-en.html");
 
-INCTXT(H5GG_JQUERY_FILE, "jquery.min.js");
+INCTXT(H5GG_JQUERY_FILE, "RootBridge/jquery.min.js");
 
 //
 
@@ -687,5 +687,3 @@ static void __attribute__((constructor)) _init_()
         
     }
 }
-
-//忽略一些警告结

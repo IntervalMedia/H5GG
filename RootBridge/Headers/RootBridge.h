@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 
 @interface RootBridge : NSObject
++ (NSString *)getCallerPath;
 + (BOOL)isJBRootless;
 + (NSString *)getJBPath:(NSString *)path;
 @end

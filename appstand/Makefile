@@ -2,7 +2,7 @@
 DEBUG=0
 STRIP=1
 FINALPACKAGE=1
-THEOS_DEVICE_IP = iphoneX.local
+# THEOS_DEVICE_IP = iphoneX.local
 THEOS_PLATFORM_DEB_COMPRESSION_TYPE = gzip
 
 include $(THEOS)/makefiles/common.mk

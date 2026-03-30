@@ -7,6 +7,7 @@
 
 SBApplication *applicationForID(NSString *applicationID);
 
+
 @class ContextHostManager;
 @protocol ContextHostManagerExternalSceneDelegate <NSObject>
 -(void)contextManager:(id)manager scene:(FBScene *)scene sceneStackDidChange:(UIView *)sceneStack;
@@ -18,6 +19,8 @@ SBApplication *applicationForID(NSString *applicationID);
 + (id)sharedInstance;
 
 -(UIView *)hostViewForBundleID:(NSString *)bundleId;
+// -(UIView *)hostViewForSceneLayer:(FBSceneLayer *)layer;
+
 -(void)stopHostingView:(__weak UIView *)view forBundleId:(NSString *)bundleId;
 -(BOOL)isHostViewHosting:(UIView *)hostView;
 

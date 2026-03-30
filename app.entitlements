@@ -27,6 +27,13 @@
 	<true/>
 	<key>com.apple.springboard.launchapplications</key>
 	<true/>
+	<key>com.apple.frontboard.debug-applications</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Bypassing Jetsam constraints explicitly -->
+	<key>com.apple.private.memorystatus</key>
+	<true/>
 	<key>com.apple.springboard.opensensitiveurl</key>
 	<true/>
 	<key>com.apple.lsapplicationworkspace.rebuildappdatabases</key>
@@ -79,5 +86,9 @@
 	<true/>
 	<key>application-identifier</key>
 	<string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</dict>
+</plist>
+
+
 </dict>
 </plist>

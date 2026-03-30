@@ -82,7 +82,7 @@ flags+=("$@")
 mkdir -p "${out}"
 set -x
 
-"${flags[@]}" -O3 -g0 -c -std=c++11 -o "${out}"/ldid.o ldid.cpp
+"${flags[@]}" -O3 -g0 -c -std=c++17 -o "${out}"/ldid.o ldid.cpp
 "${flags[@]}" -O3 -g0 -o "${out}"/ldid "${out}"/ldid.o "${os[@]}" -x c lookup2.c -lxml2 -framework Security
 
 if ! "${ios}"; then

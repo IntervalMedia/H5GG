@@ -50,29 +50,6 @@ static inline BOOL RBIsUserAppExecutablePath(const char *rawPath) {
     return hasVarPrefix && [path containsString:@"/Application/"];
 }
 
-static inline int JJSearchTypeLength(int jjtype) {
-    switch(jjtype) {
-        case JJ_Search_Type_Double:
-            return sizeof(double);
-        case JJ_Search_Type_ULong:
-        case JJ_Search_Type_SLong:
-            return sizeof(int64_t);
-        case JJ_Search_Type_Float:
-            return sizeof(float);
-        case JJ_Search_Type_UInt:
-        case JJ_Search_Type_SInt:
-            return sizeof(int32_t);
-        case JJ_Search_Type_UShort:
-        case JJ_Search_Type_SShort:
-            return sizeof(int16_t);
-        case JJ_Search_Type_UByte:
-        case JJ_Search_Type_SByte:
-            return sizeof(int8_t);
-        default:
-            return 0;
-    }
-}
-
 
 @protocol h5ggJSExport <JSExport>
 
@@ -223,9 +200,11 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
     map<void*,int8_t> results;
 
     try {
+
         results = self.engine->getResultsAndTypes(maxCount, skipCount);
+
     } catch(std::bad_alloc) {
-        [(id<H5Alerting>)floatH5 alert:Localized(@"错误:内存不足!")];
+    [(id<H5Alerting>)floatH5 alert:Localized(@"错误:内存不足!")];
     }
     
     for(map<void*,int8_t>::iterator it = results.begin(); it != results.end(); ++it) {
@@ -236,28 +215,14 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
         
         NSString* ggtype = [self jjtype2ggtype:jjtype];
         
-        // Use a larger buffer for string types during display
-        if (jjtype == JJ_Search_Type_CString || jjtype == JJ_Search_Type_UTF16) {
-            // Read up to 64 bytes for display purposes
-            UInt8 valuebuf[64] = {0};
-            vm_size_t size = 0;
-            vm_read_overwrite(self.engine->task, (uint64_t)address, sizeof(valuebuf)-2, (vm_address_t)valuebuf, &size);
-            
-            [resultArr addObject:@{
-                @"address": [NSString stringWithFormat:@"0x%llX", address ],
-                @"value": [self formartValue:valuebuf byType:ggtype],
-                @"type" : ggtype,
-            }];
-        } else {
-            UInt8 valuebuf[8]={0};
-            self.engine->JJReadMemory(valuebuf, (UInt64)address, jjtype);
-            
-            [resultArr addObject:@{
-                @"address": [NSString stringWithFormat:@"0x%llX", address ],
-                @"value": [self formartValue:valuebuf byType:ggtype],
-                @"type" : ggtype,
-            }];
-        }
+        UInt8 valuebuf[8]={0};
+        self.engine->JJReadMemory(valuebuf, (UInt64)address, jjtype);
+        
+        [resultArr addObject:@{
+            @"address": [NSString stringWithFormat:@"0x%llX", address ],
+            @"value": [self formartValue:valuebuf byType:ggtype],
+            @"type" : ggtype,
+        }];
     }
     
     return resultArr;
@@ -286,11 +251,6 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
         return JJ_Search_Type_Float;
     else if([type isEqualToString:@"F64"])
         return JJ_Search_Type_Double;
-    // New String Types
-    else if([type isEqualToString:@"utf8"])
-        return JJ_Search_Type_CString;
-    else if([type isEqualToString:@"utf16"])
-        return JJ_Search_Type_UTF16;
     
     return 0;
 }
@@ -318,11 +278,6 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
             return @"F32";
         case JJ_Search_Type_Double:
             return @"F64";
-        // New String Types
-        case JJ_Search_Type_CString:
-            return @"utf8";
-        case JJ_Search_Type_UTF16:
-            return @"utf16";
     }
     
     return @"";
@@ -353,21 +308,8 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
     } else if([type isEqualToString:@"F64"]) {
         NSString* fmt = *(uint64_t*)value&&fabs(*(double*)value) < 1.0 ? @"%g" : @"%f";
         return [NSString stringWithFormat:fmt, *(double*)value];
-    } 
-    // String Formatting
-    else if([type isEqualToString:@"utf8"]) {
-        NSString* str = [NSString stringWithUTF8String:(char*)value];
-        return str ? str : @"";
-    }
-    else if([type isEqualToString:@"utf16"]) {
-        // Assume basic sanity check for length, here we just read from the buffer passed in
-        NSString* str = [[NSString alloc] initWithBytes:value length:wcslen((wchar_t*)value)*2 encoding:NSUTF16LittleEndianStringEncoding];
-        // Fallback if wcslen fails or buffer isn't null terminated cleanly in read window
-        if (!str) str = [[NSString alloc] initWithData:[NSData dataWithBytes:value length:32] encoding:NSUTF16LittleEndianStringEncoding];
-        return str ? str : @"";
-    }
-    else {
-        [(id<H5Alerting>)floatH5 alert:Localized(@"不支持的数值类型")];
+    } else {
+    [(id<H5Alerting>)floatH5 alert:Localized(@"不支持的数值类型")];
         return nil;
     }
 }
@@ -407,32 +349,13 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
     } else if([type isEqualToString:@"F64"]) {
        *(double*)valuebuf = strtod([value UTF8String], &pvaluerr);
         JJType = JJ_Search_Type_Double;
-    }
-    // New String Parsing
-    else if([type isEqualToString:@"utf8"]) {
-        const char* cStr = [value UTF8String];
-        size_t len = strlen(cStr);
-        if (len > 255) len = 255; // Safety cap
-        memcpy(valuebuf, cStr, len);
-        ((char*)valuebuf)[len] = '\0';
-        JJType = JJ_Search_Type_CString;
-    }
-    else if([type isEqualToString:@"utf16"]) {
-        NSData* data = [value dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
-        size_t len = data.length;
-        if (len > 254) len = 254; // Safety cap
-        memcpy(valuebuf, data.bytes, len);
-        ((char*)valuebuf)[len] = 0;
-        ((char*)valuebuf)[len+1] = 0; // Double null terminator for UTF16
-        JJType = JJ_Search_Type_UTF16;
-    }
-    else {
-        [(id<H5Alerting>)floatH5 alert:Localized(@"不支持的数值类型")];
+    } else {
+    [(id<H5Alerting>)floatH5 alert:Localized(@"不支持的数值类型")];
         return 0;
     }
     
     if(pvaluerr && pvaluerr[0]) {
-        [(id<H5Alerting>)floatH5 alert:Localized(@"数值格式错误或与类型不匹配")];
+    [(id<H5Alerting>)floatH5 alert:Localized(@"数值格式错误或与类型不匹配")];
         return 0;
     }
     
@@ -441,20 +364,15 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
 
 -(int)parseSearchValue:(void*)valuebuf from:(NSString*)value byType:(NSString*)type
 {
-    // Skip regex range parsing for strings, as ranges usually apply to numbers
-    if ([type isEqualToString:@"utf8"] || [type isEqualToString:@"utf16"]) {
-        return [self parseValue:valuebuf from:value byType:type];
-    }
-
     NSString *pattern = @"^([^~～]+)[~～]([^~～]+)$";
     NSRegularExpression *regex = [[NSRegularExpression alloc] initWithPattern:pattern options:0 error:nil];
     NSTextCheckingResult *result = [regex firstMatchInString:value options:0 range:NSMakeRange(0, value.length)];
-    NSLog(@"firstMatchInString rangeCount=%lu %@", (unsigned long)[result numberOfRanges], result);
+    NSLog(@"firstMatchInString rangeCount=%d %@", [result numberOfRanges], result);
     
     if([result numberOfRanges] != 3) {
         int jjtype = [self parseValue:valuebuf from:value byType:type];
         if(!jjtype) return 0;
-        int len = JJSearchTypeLength(jjtype);
+        int len = JJ_Search_Type_Len[jjtype];
         void* valuebuf2 = (void*)((uint64_t)valuebuf + len);
         memcpy(valuebuf2, valuebuf, len);
         return jjtype;
@@ -469,7 +387,7 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
     int jjtype = [self ggtype2jjtype:type];
     if(!jjtype) return 0;
     
-    int len = JJSearchTypeLength(jjtype);
+    int len = JJ_Search_Type_Len[jjtype];
     
     if(![self parseValue:valuebuf from:value1 byType:type])
         return 0;
@@ -491,9 +409,7 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
         return;
     }
     
-    // Increased buffer to accommodate strings
-    UInt8 valuebuf[256];
-    memset(valuebuf, 0, sizeof(valuebuf));
+    UInt8 valuebuf[8*2];
     
     int jjtype = [self parseSearchValue:valuebuf from:value byType:type];
     if(!jjtype) {
@@ -550,9 +466,7 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
         return;
     }
     
-    // Increased buffer
-    UInt8 valuebuf[256];
-    memset(valuebuf, 0, sizeof(valuebuf));
+    UInt8 valuebuf[8*2];
     
     int jjtype = [self parseSearchValue:valuebuf from:value byType:type];
     if(!jjtype) {
@@ -608,19 +522,10 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
         return @"";
     }
     
-    // Buffer for reading
-    UInt8 valuebuf[256] = {0};
-    
-    // For strings, we read more bytes
-    if (jjtype == JJ_Search_Type_CString || jjtype == JJ_Search_Type_UTF16) {
-        vm_size_t size = 0;
-        kern_return_t kr = vm_read_overwrite(self.engine->task, addr, sizeof(valuebuf)-2, (vm_address_t)valuebuf, &size);
-        if (kr != KERN_SUCCESS) return @"";
-    } else {
-        if(!self.engine->JJReadMemory(valuebuf, addr, jjtype)) {
-            //[floatH5 alert:@"读取失败:可能地址已失效"];
-            return @"";
-        }
+    UInt8 valuebuf[8];
+    if(!self.engine->JJReadMemory(valuebuf, addr, jjtype)) {
+        //[floatH5 alert:@"读取失败:可能地址已失效"];
+        return @"";
     }
     
     return [self formartValue:valuebuf byType:type];
@@ -628,9 +533,7 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
 
 -(BOOL)setValue:(NSString*)address param2:(NSString*)value param3:(NSString*)type
 {
-    // Increased buffer
-    UInt8 valuebuf[256];
-    memset(valuebuf, 0, sizeof(valuebuf));
+    UInt8 valuebuf[8];
     
     int jjtype = [self parseValue:valuebuf from:value byType:type];
     if(!jjtype) {
@@ -651,9 +554,7 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
 
 -(int)editAll:(NSString*)value param3:(NSString*)type
 {
-    // Increased buffer
-    UInt8 valuebuf[256];
-    memset(valuebuf, 0, sizeof(valuebuf));
+    UInt8 valuebuf[8];
 
     int jjtype = [self parseValue:valuebuf from:value byType:type];
     if(!jjtype) {

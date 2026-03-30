@@ -43,7 +43,7 @@ input {
 }
 
 button {
-    height: 28px;
+    height: 30px;
     color: #3393EF;
     background-color: #84848450;
     display: inline-block;
@@ -53,7 +53,7 @@ button {
     outline: none;
     border: none;
     border-radius: 5px;
-    padding: 0 2px;
+    padding: 0 6px;
     margin: 2px;
 }
 
@@ -72,7 +72,7 @@ input[type=radio]  {
     vertical-align:middle;
     border:1px solid #686868F0;
     border-radius:50%;
-    margin:6px 2px;
+    margin:6px 4px;
 }
 input[type=radio]:checked {
     border:5px solid #2F7DCDF0;
@@ -280,26 +280,6 @@ table.datatype {
     background-color: #3393EF;
 }
 
-.datatype tr.datatype-string td {
-    font-size: 11px;
-    text-transform: uppercase;
-}
-
-.datatype td.placeholder {
-    border: none;
-    cursor: default;
-    pointer-events: none;
-    background: transparent;
-}
-
-.datatype td.disabled {
-    color: #B8B8B8;
-    border-color: #D1D1D1;
-    cursor: default;
-    pointer-events: none;
-    background: transparent;
-}
-
 .maskview {
     display: none;
     position: absolute;
@@ -331,27 +311,11 @@ table.datatype {
     font-size:12px;color:#848484
 }
 
-#resultList tr[data-readonly="true"] td {
-    cursor: default;
-}
-
 </style>
 
 <script>
 
 var h5gg_jquery_stub;
-
-var NUMERIC_TYPES = ["F32","F64","I8","I16","I32","I64"];
-var STRING_TYPES = ["utf8","utf16"];
-var stringEditNoticeShown = false;
-
-function getSelectedDatatype()
-{
-    var selected = $("table#datatype td.selected").data("type");
-    if(selected && NUMERIC_TYPES.indexOf(selected) !== -1)
-        return selected;
-    return "I32";
-}
 
 if(typeof $ == 'undefined')
     document.write("<script src=\"https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js\"><\/script>");
@@ -359,7 +323,6 @@ if(typeof $ == 'undefined')
 //根据选择的有符号/无符号数确定搜索类型
 function h5ggType(type)
 {
-
     if($("input:radio[name=numtype]:checked").val()=="unsigned") {
         switch(type) {
             case "I8":
@@ -409,8 +372,6 @@ document.addEventListener("DOMContentLoaded", function(){
     
     $("#datavalue").focus(function(){
         var input = $(this);
-        if(!input.data("number-mode"))
-            return;
         input.attr("type","number");
         setTimeout(function(){
             input.attr("type","text");
@@ -482,7 +443,7 @@ document.addEventListener("DOMContentLoaded", function(){
                         }
                         
                         if(!alive) {
-                            alert("Target process terminated\n\nPlease click on the title bar to select a new target");
+                            alert("目标进程已结束\n\n请点击标题栏选择新的目标");
                             $("#procname").removeAttr('pid');
                             $("#procname").text('');
                         }
@@ -504,40 +465,26 @@ document.addEventListener("DOMContentLoaded", function(){
     //点击结果列表里面的地址时弹出修改窗口, 要在listdiv刷新html之后绑定
     $("table#resultList").on('click','tr', function()
     {
-        var datatype = $(this).attr("datatype");
-        if(datatype==='utf8' || datatype==='utf16') {
-            if(!stringEditNoticeShown) {
-                alert("String results are read-only and cannot be edited.");
-                stringEditNoticeShown = true;
-            }
-            return;
-        }
-
         $("table#resultList tr").removeClass("hilight");
         $(this).addClass("hilight");
         
         var address = $(this).attr("address");
+        var datatype = $(this).attr("datatype");
         var datavalue = $(this).attr("datavalue");
         
         //读取该地址最新数据
         if(typeof h5gg!='undefined')
             datavalue = h5gg.getValue(address, h5ggType(datatype));
         
-        showPopView("&nbsp;&nbsp;Edit&nbsp;&nbsp;", function(type, value){
+        showPopView("修改", function(type, value){
             
             if(!h5gg.setValue(address, value, h5ggType(type))) {
-                alert("The modification failed, the address may be invalid!");
+                alert("修改失败,可能地址已失效!");
             }
             
             onClickRefreshResults();
             
-        }, {
-            presetType: datatype,
-            presetValue: datavalue,
-            allowedTypes: NUMERIC_TYPES,
-            actionLabel: "Save",
-            numberMode: true
-        });
+        }, datatype, datavalue);
     });
 });
 
@@ -552,7 +499,7 @@ function refreshProcList(procs)
         btn.click(function()
         {
             if(!h5gg.setTargetProc($(this).attr('pid'))) {
-                alert("Cannot Select Target!");
+                alert("无法选定该目标");
                 return;
             }
             
@@ -577,13 +524,13 @@ function refreshLocalSrcipts()
     setTimeout(function(){
         
         if(jsfiles.length==0) {
-            $("table#localjslist tbody").append("<tr><td colspan=2>Searching App's Documents Directory...<br/>Searching .app Bundle Directory...<br/>No (*.js) or (*.html) files found!</td></td>");
+            $("table#localjslist tbody").append("<tr><td colspan=2>正在搜索App的Documents数据目录...<br/>正在搜索App的.app程序目录...<br/>没有找到任何(*.js)或(*.html)文件!</td></td>");
         }
         
-        $("table#localjslist tbody").append('<tr><td style="border-right-style:none; color:blue">Browser on File App</td><td style="border-left-style:none;width:45px"><button onclick="h5gg.pickScriptFile(onClickLoadScript)">Load</button></td></tr>');
+        $("table#localjslist tbody").append('<tr><td style="border-right-style:none; color:blue">从文件管理器中选择</td><td style="border-left-style:none;width:45px"><button onclick="h5gg.pickScriptFile(onClickLoadScript)">浏览</button></td></tr>');
         
         for(var i=0; i<jsfiles.length; i++) {
-            var row = '<tr><td style="border-right-style:none;font-weight:bold;color:green">'+jsfiles[i].name+'</td><td style="border-left-style:none;width:45px"><button onclick="onClickLoadScript(\''+jsfiles[i].path+'\')">Load</button></td></tr>';
+            var row = '<tr><td style="border-right-style:none;font-weight:bold;color:green">'+jsfiles[i].name+'</td><td style="border-left-style:none;width:45px"><button onclick="onClickLoadScript(\''+jsfiles[i].path+'\')">加载</button></td></tr>';
             $("table#localjslist tbody").append(row);
         }
     }, 300);
@@ -612,7 +559,7 @@ function onClickLoadScript(url, type)
         url = new URL(url);
         url.searchParams.append("_", Math.random());
     }catch(e){
-        alert("invliad URL!");
+        alert("无效的脚本URL");
         return;
     }
     
@@ -629,13 +576,13 @@ function onClickLoadScript(url, type)
     script.type = "text/javascript";
     
     script.onload = function () {
-      alert("JS Run Complete!");
+      alert("JS脚本执行完毕");
         $("#popup_progress").hide();
         $("#maskview_script").hide();
     };
     
     script.onerror = function () {
-        alert("Load Error!\nURL Invalid or Network Exception!");
+        alert("加载失败! 文件不存在或网络异常");
         $("#popup_progress").hide();
         $("#maskview_script").hide();
     };
@@ -648,101 +595,49 @@ function onClickLoadScript(url, type)
 //弹出搜索或修改窗口
 function showPopView(name, action, type, value)
 {
-    var defaults = {
-        presetType: null,
-        presetValue: undefined,
-        allowedTypes: null,
-        maxLength: null,
-        inputPlaceholder: null,
-        inputType: "text",
-        actionLabel: null,
-        numberMode: true
-    };
-
-    if(typeof type === 'object' && type !== null) {
-        defaults = Object.assign(defaults, type);
-    } else {
-        defaults.presetType = type || null;
-        defaults.presetValue = value;
-    }
-
     $("#maskview").show();
     $("#popup_search_edit").show();
     $("#popup_search_edit").find("B#titleBar").html(name);
-    $("#popup_search_edit").find("button#action").html(defaults.actionLabel || name);
-
-    var $cells = $("table#datatype td[data-type]");
-    var allowed = defaults.allowedTypes;
-    var typeToUse = defaults.presetType;
-
-    $cells.each(function(){
-        var cellType = $(this).data("type");
-        var isAllowed = !allowed || allowed.indexOf(cellType) !== -1;
-        $(this).toggleClass("disabled", !isAllowed);
-        if(!isAllowed && $(this).hasClass("selected")) {
-            $(this).removeClass("selected");
-        }
-    });
-
-    if(!typeToUse || (allowed && allowed.indexOf(typeToUse) === -1)) {
-        if(allowed && allowed.length) {
-            typeToUse = allowed[0];
-        } else if($cells.length) {
-            typeToUse = $cells.first().data("type");
-        }
+    $("#popup_search_edit").find("button#action").html(name);
+    
+    if(type) {
+        $("table#datatype td").each(function(){
+            if($(this).text()==type)
+                $(this).addClass("selected");
+            else
+                $(this).removeClass("selected");
+        });
     }
-
-    if(typeToUse) {
-        $cells.removeClass("selected");
-        $cells.filter(function(){
-            return $(this).data("type") === typeToUse;
-        }).first().addClass("selected");
+    
+    if(value) {
+        $("input#datavalue").val(value);
     }
-
-    var $input = $("input#datavalue");
-    if(typeof defaults.presetValue !== 'undefined') {
-        $input.val(defaults.presetValue);
-    }
-
-    if(defaults.maxLength) {
-        $input.attr("maxlength", defaults.maxLength);
-    } else {
-        $input.removeAttr("maxlength");
-    }
-
-    $input.attr("placeholder", defaults.inputPlaceholder || (allowed ? "String" : "Number"));
-    $input.attr("type", defaults.inputType || "text");
-    $input.data("number-mode", !!defaults.numberMode);
-    $input.attr("inputmode", defaults.numberMode ? "decimal" : "text");
-    $input.focus();
-
+    
+    $("input#datavalue").focus();
+    
     $("#popup_search_edit").find("button#action").unbind("click").click(function(){
-        var selectedType = $("table#datatype td.selected").data("type");
-        var val = $("input#datavalue").val();
-
+        var type = $("table#datatype td.selected").text();
+        var value = $("input#datavalue").val();
+        
         $("#popup_search_edit").hide();
         $("#popup_progress").show();
-
+        
         setTimeout(function() {
-
-            action(selectedType, val);
-
+            
+            action(type, value);
+            
             $("#popup_progress").hide();
             $("#maskview").hide();
         }, 200);
-
+        
     });
-
+    
     $("#popup_search_edit").find("button#cancel").unbind("click").click(function(){
         $("#maskview").hide();
         $("#popup_search_edit").hide();
     });
-
+    
     $("table#datatype td").unbind("click").click(function(){
-        var cellType = $(this).data("type");
-        if(!cellType || $(this).hasClass("disabled"))
-            return;
-
         $("table#datatype td").removeClass("selected");
         $(this).addClass("selected");
         $("input#datavalue").focus();
@@ -769,19 +664,9 @@ function loadResults(from, count)
     
     for(var i=0; i<results.length; i++)
     {
-        var type = results[i].type;
-        var value = results[i].value;
-        var isStringType = (type=='utf8' || type=='utf16');
-        var displayValue = value;
-        if(isStringType)
-            displayValue = '"'+value+'"';
-        else if(type=='F32' || type=='F64')
-            displayValue = '('+value+')';
-
-        var attrs = ' address="'+results[i].address+'" datatype="'+type+'" datavalue="'+value+'"';
-        if(isStringType)
-            attrs += ' data-readonly="true"';
-        var row = '<tr'+attrs+'><td>'+(from+i+1)+'. '+results[i].address+'<br/><font>'+displayValue+'</font></td></tr>';
+        if(results[i].type=='F32' || results[i].type=='F64')
+            results[i].value = '('+results[i].value+')';
+        var row = '<tr address="'+results[i].address+'" datatype="'+results[i].type+'" datavalue="'+results[i].value+'"><td>'+(from+i+1)+'. '+results[i].address+'<br/><font>'+results[i].value+'</font></td></tr>';
         
         $("table#resultList tbody").append(row);
     }
@@ -797,7 +682,7 @@ function onClickRefreshResults(clean)
    }
 
     var count = h5gg.getResultsCount();
-    $("#results_count").text("Results Count: "+count);
+    $("#results_count").text("共找到"+count+"条结果");
     $("#results_count").show();
     
     var currentCount = Number($("table#resultList").attr("currentCount"));
@@ -840,83 +725,29 @@ function onClickEditAll()
         return;
     }*/
     
-    showPopView("EditAll", function(type, value){
+    showPopView("修改全部", function(type, value){
 
         var count = h5gg.editAll(value, h5ggType(type));
         
         onClickRefreshResults();
         
-        alert("Success to modify count: "+count);
-    }, {
-        allowedTypes: NUMERIC_TYPES,
-        actionLabel: "Apply",
-        presetType: getSelectedDatatype(),
-        numberMode: true
-    });
-}
-
-
-function onClickSearchString()
-{
-    showPopView("Search String", function(type, value) {
-        if(!value) {
-            alert("Please enter a string value (max 64 chars).");
-            return;
-        }
-        var memoryFrom = $("input#range_min").val();
-        var memoryTo = $("input#range_max").val();
-        h5gg.searchNumber(value, type, memoryFrom, memoryTo);
-        onClickRefreshResults(true);
-    }, {
-        allowedTypes: STRING_TYPES,
-        maxLength: 64,
-        inputPlaceholder: "Enter UTF text (max 64 chars)",
-        actionLabel: "Search",
-        presetType: STRING_TYPES[0],
-        presetValue: "",
-        numberMode: false
-    });
-}
-
-
-function onClickSearchNearbyString()
-{
-    showPopView("Search String", function(type, value){
-        if(!value) {
-            alert("Please enter a string value (max 64 chars).");
-            return;
-        }
-        var nearbyRange = $("input#nearby_range").val();
-        h5gg.searchNearby(value, type, nearbyRange);
-        onClickRefreshResults(true);
-    }, {
-        allowedTypes: STRING_TYPES,
-        maxLength: 64,
-        inputPlaceholder: "Enter UTF text (max 64 chars)",
-        actionLabel: "Search",
-        presetType: STRING_TYPES[0],
-        presetValue: "",
-        numberMode: false
+        alert("成功修改"+count+"个数据");
     });
 }
 
 function onClickSearchNumber()
 {
-    showPopView("Search Number", function(type, value) {
+    showPopView("搜索数值", function(type, value) {
+        
         h5gg.setFloatTolerance($("#float_tolerance").val());
+        
         var memoryFrom = $("input#range_min").val();
         var memoryTo = $("input#range_max").val();
         h5gg.searchNumber(value, h5ggType(type), memoryFrom, memoryTo);
+        
         onClickRefreshResults(true);
-    }, {
-        allowedTypes: NUMERIC_TYPES,
-        actionLabel: "Search",
-        presetType: getSelectedDatatype(),
-        numberMode: true
     });
 }
-
-
 
 function onClickSearchNearby()
 {
@@ -926,7 +757,7 @@ function onClickSearchNearby()
         return;
     }*/
     
-    showPopView("Nearby Search", function(type, value){
+    showPopView("搜索附近数值", function(type, value){
         
         h5gg.setFloatTolerance($("#float_tolerance").val());
         
@@ -934,22 +765,15 @@ function onClickSearchNearby()
         h5gg.searchNearby(value, h5ggType(type), nearbyRange);
         
         onClickRefreshResults(true);
-    }, {
-        allowedTypes: NUMERIC_TYPES,
-        actionLabel: "Search",
-        presetType: getSelectedDatatype(),
-        numberMode: true
     });
 }
-   
-
-
+    
 function onClickMakeTweak()
 {
-    alert("Make your custom dylib\n\nStep 1: Select a picture file for float button");
+    alert("制作自己专属的dylib\n\n第一步: 选择悬浮按钮图标文件");
     h5gg.pickScriptFile(function(icon){
         
-        alert("Step 2: Select a html file that needs to load automatically");
+        alert("第二步: 选择需要自动加载的html文件");
         
         h5gg.pickScriptFile(function(html) {
             
@@ -968,7 +792,7 @@ function onClickMakeTweak()
 <div id="titleBar" style="background-color:#D1D1D1; padding:5px; margin:0px; height:12px">
 &nbsp;<font style="color:green">H5</font> <font style="color:red">GG</font>&nbsp;v<span id="version"></span>
 <span id="crossproc" style="display:none">
-<font style="color:blue">&nbsp;CrossProc&nbsp;</font><font id="procname">procname</font>
+<font style="color:blue">&nbsp;跨进程&nbsp;</font><font id="procname">procname</font>
 </span>
     
 <div id="closeMenu" style="float:right; font-size:16px; line-height:14px; font-family: Arial, sans-serif;" onclick="setWindowVisible(false)">&nbsp;X&nbsp;</div>
@@ -976,33 +800,30 @@ function onClickMakeTweak()
 <!--用一个表格来布局左右两栏-->
 <table id="bodyView" width="100%" style="table-layout:fixed;height: calc(100% - 22px) ;">
 <tr>
-<td style="vertical-align:top;width:135px;border-right:solid 2px #D1D1D1;">
+<td style="vertical-align:top;width:130px;border-right:solid 2px #D1D1D1;">
 <div>
-MemStart:<input id="range_min" style="width:76px;padding-left:0" value="0x00000000" />
+搜索下限:<input id="range_min" style="width:80px;padding-left:0" value="0x00000000" />
 <br/>
-MemEnd:<input id="range_max" style="width:80px;padding-left:0"  value="0x200000000" />
+搜索上限:<input id="range_max" style="width:80px;padding-left:0"  value="0x200000000" />
 <br/>
-<label><input type=radio name="numtype" value="signed" checked />Signed</label>
-<label><input type=radio name="numtype" value="unsigned" />UnSigned</label>
+<label><input type=radio name="numtype" value="signed" checked />有符号</label>
+<label><input type=radio name="numtype" value="unsigned" />无符号</label>
 <br/>
-<button onclick="onClickSearchString()">Search String</button>
-<button onclick="onClickSearchNearbyString()">NearbyString</button>
+<button onclick="onClickSearchNumber()">搜索数值</button>
+<button onclick="onClickSearchNearby()">邻近搜索</button>
 <br/>
-<button onclick="onClickSearchNumber()">Search</button>
-<button onclick="onClickSearchNearby()">NearbySearch</button>
+<button onclick="onClickClearResults()">清除</button>
+<button onclick="onClickEditAll()">全改</button>
+<button onclick="onClickRefreshResults()">刷新</button>
 <br/>
-<button onclick="onClickClearResults()">Clear</button>
-<button onclick="onClickEditAll()">EditAll</button>
-<button onclick="onClickRefreshResults()">Refresh</button>
+<button onclick="onShowLoadScript(true)">加载脚本</button>
+<button onclick="onClickMakeTweak()">制作插件</button>
 <br/>
-<button onclick="onShowLoadScript(true)">&nbsp;Scripts&nbsp;</button>
-<button onclick="onClickMakeTweak()">&nbsp;MakeTweak&nbsp;</button>
+邻近范围:<input id="nearby_range" style="width:78px"  value="0x100"/>
 <br/>
-NearbyRange:<input id="nearby_range" style="width:55px"  value="0x100"/>
+浮点误差:<input id="float_tolerance" style="width:78px" value="0.0"/>
 <br/>
-FloatTolerance:<input id="float_tolerance" style="width:50px" value="0.0"/>
-<br/>
-<p id="results_count" style="display:none">Results Count:<span>0</span></p>
+<p id="results_count" style="display:none">共找到<span>0</span>条结果</p>
 </div>
 </td>
 <td style="vertical-align:top;">
@@ -1038,42 +859,29 @@ FloatTolerance:<input id="float_tolerance" style="width:50px" value="0.0"/>
 <div class="popup_container">
     
 <div id="popup_search_edit">
-<B id="titleBar">Search Number</B>
+<B id="titleBar">搜索数值</B>
 <br/><br/>
 <center>
 <table id="datatype" class="datatype">
-<tr class="datatype-numeric">
-<td data-type="F32">F32</td>
-<td data-type="F64">F64</td>
-<td data-type="I8">I8</td>
-<td data-type="I16">I16</td>
-<td data-type="I32" class="selected">I32</td>
-<td data-type="I64">I64</td>
-</tr>
-<tr class="datatype-string">
-<td data-type="utf8">UTF8</td>
-<td data-type="utf16">UTF16</td>
-<td class="placeholder"></td>
-<td class="placeholder"></td>
-<td class="placeholder"></td>
-<td class="placeholder"></td>
+<tr>
+<td>F32</td><td>F64</td><td>I8</td><td>I16</td><td class="selected">I32</td><td>I64</td>
 </tr>
 </table>
 </center>
 <br/>
-<input type="text" id="datavalue" style="width:100%; border:none" placeholder="Number" />
+<input type="text" id="datavalue" style="width:100%; border:none" placeholder="数值" />
 <hr/>
-<button id="cancel">Cancel</button>
+<button id="cancel">取消</button>
 &nbsp;&nbsp;&nbsp;
-<button id="action">Search</button>
+<button id="action">搜索数值</button>
 </div>
 
 
 <!--居中的加载脚本窗口,默认隐藏-->
 <div id="popup_loadscripts" class="popup_view3">
 <center>
-<div class="menubox current" menu="localjs" onclick="refreshLocalSrcipts()">Local ⟳</div>
-<div class="menubox" menu="netjs">Network</div>
+<div class="menubox current" menu="localjs" onclick="refreshLocalSrcipts()">本地加载 ⟳</div>
+<div class="menubox" menu="netjs">网络加载</div>
 <div style="float:right; font-size:16px; font-family: Arial, sans-serif;" onclick="onShowLoadScript(false)">&nbsp;X&nbsp;</div>
 </center>
 <hr/>
@@ -1094,11 +902,11 @@ FloatTolerance:<input id="float_tolerance" style="width:50px" value="0.0"/>
 </div>
 <div id="netjs" class="menuview">
 <br/><br/>
-<input id="netjsurl" style="width:100%" placeholder="URL start with http/https" />
+<input id="netjsurl" style="width:100%" placeholder="请输入http/https开头的js/html文件网址链接" />
 <br/><br/><br/>
 <hr/>
-<button onclick="onClickLoadScript($('#netjsurl').val(), 'js')">Load JS</button>
-<button onclick="onClickLoadScript($('#netjsurl').val(), 'h5');">Load HTML</button>
+<button onclick="onClickLoadScript($('#netjsurl').val(), 'js')">加载JS脚本</button>
+<button onclick="onClickLoadScript($('#netjsurl').val(), 'h5');">加载H5页面</button>
 </div>
 
 <!--运行脚本灰色遮罩层(执行脚本时用)-->
@@ -1109,13 +917,13 @@ FloatTolerance:<input id="float_tolerance" style="width:50px" value="0.0"/>
 <!--居中的提示框, 默认隐藏-->
 <div id="popup_progress">
 <center>
-    Running...
+    执行中...
 </center>
 </div>
 
 <div id="popup_proclist">
 <center>
-Select Target
+选择目标
 <hr/>
 <div id="proctable" class="scrollbar" style="min-height:50px; max-height:170px">
 <button>Process1</button>

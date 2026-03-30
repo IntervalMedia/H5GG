@@ -15,7 +15,7 @@ TWEAK_NAME = customAlert
 
 customAlert_FILES = Tweak.mm
 customAlert_CFLAGS = -fobjc-arc -fvisibility=hidden 
-customAlert_CCFLAGS = -fobjc-arc -fvisibility=hidden -std=c++11
+customAlert_CCFLAGS = -fobjc-arc -fvisibility=hidden -std=c++17
 customAlert_LOGOS_DEFAULT_GENERATOR = internal
 
 include $(THEOS_MAKE_PATH)/tweak.mk

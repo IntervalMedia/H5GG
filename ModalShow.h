@@ -16,8 +16,11 @@
 
 @interface ModalShow : NSObject
 +(void)alert:(NSString*)title message:(NSString*)message;
++(void)alert:(NSString*)title message:(NSString*)message InWindow:(UIWindow*)window;
 +(BOOL)confirm:(NSString*)message;
++(BOOL)confirm:(NSString*)message InWindow:(UIWindow*)window;
 +(NSString*)prompt:(NSString*)text defaultText:(NSString*)defaultText;
++(NSString*)prompt:(NSString*)text defaultText:(NSString*)defaultText InWindow:(UIWindow*)window;
 @end
 
 @implementation ModalShow
@@ -67,6 +70,21 @@ extern "C"  {
 
 +(void)dismiss {
     dispatch_semaphore_signal(semaphore);
+}
+
++(void)alert:(NSString*)title message:(NSString*)message
+{
+    [self alert:title message:message InWindow:[UIApplication sharedApplication].keyWindow];
+}
+
++(BOOL)confirm:(NSString*)message
+{
+    return [self confirm:message InWindow:[UIApplication sharedApplication].keyWindow];
+}
+
++(NSString*)prompt:(NSString*)text defaultText:(NSString*)defaultText
+{
+    return [self prompt:text defaultText:defaultText InWindow:[UIApplication sharedApplication].keyWindow];
 }
 
 +(void)alert:(NSString*)title message:(NSString*)message InWindow:(UIWindow*)window

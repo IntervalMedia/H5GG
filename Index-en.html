@@ -1,326 +1,753 @@
+<!DOCTYPE html>
 <html>
 <head>
 <title>H5GG</title>
-<!--设置手机显示模式, 填满宽度,原尺寸显示,禁止双指缩放-->
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<!--CSS外观样式表-->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no" />
 <style>
-html {
-    zoom:1.2; /*在手机上显示整体放大1.2倍*/
+:root {
+    --bg: #09111f;
+    --bg-2: #111d31;
+    --panel: rgba(15, 24, 41, 0.88);
+    --panel-solid: #121d31;
+    --panel-soft: rgba(22, 33, 53, 0.82);
+    --line: rgba(147, 172, 211, 0.18);
+    --line-strong: rgba(147, 172, 211, 0.28);
+    --text: #edf3ff;
+    --muted: #9cadc9;
+    --accent: #67b0ff;
+    --accent-2: #8c6bff;
+    --accent-soft: rgba(103, 176, 255, 0.16);
+    --success: #4ad38c;
+    --danger: #ff6d7a;
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.30);
+    --radius: 18px;
+    --radius-sm: 12px;
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, rgba(103,176,255,0.18), transparent 36%),
+        radial-gradient(circle at top right, rgba(140,107,255,0.16), transparent 30%),
+        linear-gradient(180deg, var(--bg) 0%, #0c1525 52%, #0f1a2e 100%);
 }
 
 body {
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255,255,255,0.8);
-}
-* {
-    /*默认文字颜色*/
-    color: #000;
-    font-size: 12px;
-    font-family: Arial, sans-serif;
-    
-   -webkit-tap-highlight-color: transparent;
-   outline: none;
-    
-    /*默认布局边框:灰色虚线, 开启这个方便查看布局*/
-    /*/
-     border: 1px dashed gray;/**/
-    
+    color: var(--text);
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-*:not(input,checkbox,textarea) {
-    /*禁止文本选择*/
-   -webkit-touch-callout: none;
-   -webkit-user-select: none;
-   user-select: none; /* Non-prefixed version, currently */
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+*:not(input, checkbox, textarea) {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+input, button, table, td, div, span, p, font, label, b {
+    color: inherit;
+    font: inherit;
 }
 
 input {
-    background-color: rgba(0,0,0,0);
-    height: 25px;
+    width: 100%;
+    height: 38px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 0 12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+input::placeholder {
+    color: rgba(237, 243, 255, 0.4);
 }
 
 button {
-    height: 28px;
-    color: #3393EF;
-    background-color: #84848450;
-    display: inline-block;
+    min-height: 28px;
+    border: 1px solid rgba(103,176,255,0.14);
+    border-radius: 12px;
+    padding: 0 12px;
+    background: linear-gradient(180deg, rgba(103,176,255,0.18), rgba(103,176,255,0.08));
+    color: #f2f7ff;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    text-align: center;
-    text-decoration: none;
-    outline: none;
-    border: none;
-    border-radius: 5px;
-    padding: 0 2px;
-    margin: 2px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+    transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
 button:active {
-    background-color: #fff;
-    transform: translateY(2px);
+    transform: scale(0.98);
+    background: linear-gradient(180deg, rgba(103,176,255,0.24), rgba(103,176,255,0.10));
 }
 
-input[type=radio]  {
-    width:16px;
-    height:16px;
-    margin-right:6px;
-    border:none;
-    outline-style:none;
-    -webkit-appearance:none;
-    vertical-align:middle;
-    border:1px solid #686868F0;
-    border-radius:50%;
-    margin:6px 2px;
+input[type=radio] {
+    width: 18px;
+    height: 18px;
+    margin: 0 8px 0 0;
+    border: none;
+    -webkit-appearance: none;
+    vertical-align: middle;
+    border: 1px solid rgba(188, 209, 242, 0.42);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    position: relative;
 }
+
 input[type=radio]:checked {
-    border:5px solid #2F7DCDF0;
-    background:#E8E8E8;
+    border-color: rgba(103,176,255,0.9);
+    background: radial-gradient(circle at center, #67b0ff 0 45%, transparent 48%);
 }
-    
-input[type=checkbox]{
- visibility: hidden;
- vertical-align:middle; margin-bottom:2px;
- cursor: pointer;
- position: relative;
- width: 24px;
- height: 24px;
+
+input[type=checkbox] {
+    visibility: hidden;
+    vertical-align: middle;
+    cursor: pointer;
+    position: relative;
+    width: 24px;
+    height: 24px;
 }
-input[type=checkbox]::after{
- position: absolute;
- top: 0;
- margin-top:2px;
- width: 14px; height: 14px;
- border: 1px solid #686868;
- border-radius: 3px;
- background-color: rgba(0,0,0,0);
- display: inline-block;
- visibility: visible;
- text-align: center;
- content: ' ';
+
+input[type=checkbox]::after {
+    position: absolute;
+    top: 0;
+    margin-top: 2px;
+    width: 15px;
+    height: 15px;
+    border: 1px solid rgba(188, 209, 242, 0.42);
+    border-radius: 5px;
+    background-color: rgba(255,255,255,0.04);
+    display: inline-block;
+    visibility: visible;
+    text-align: center;
+    content: ' ';
 }
-input[type=checkbox]:checked::after{
- content: "✓";
- color: #FFF;
- border-color: #B8B8B8;
- background-color: #4498F7;
- font-size: 12px;
- font-weight: bold;
+
+input[type=checkbox]:checked::after {
+    content: "✓";
+    color: #fff;
+    border-color: rgba(103,176,255,0.9);
+    background-color: #4498F7;
+    font-size: 12px;
+    font-weight: bold;
 }
 
 input[type=range] {
-  -webkit-appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
 }
-input[type=range]:focus {
-  outline: none;
-}
+
 input[type=range]::-webkit-slider-runnable-track {
-  height: 15px;
-  cursor: pointer;
-  animate: 0.2s;
-  background: #68686830;
-  border-radius: 1.3px;
-  border: 0.2px solid #010101;
+    height: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.06);
 }
+
 input[type=range]::-webkit-slider-thumb {
-  border: 1px solid #000000;
-  height: 18px;
-  width: 16px;
-  border-radius: 3px;
-  background: #EEEEEEE0;
-  cursor: pointer;
-  -webkit-appearance: none;
-  margin-top: -2px;
-}
-input[type=range]:focus::-webkit-slider-runnable-track {
-  background: #367ebd;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255,255,255,0.12);
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff, #d9e7ff);
+    margin-top: -6px;
 }
 
-.menubox {
-    display: inline;
-    padding: 5px;
-    width: 300px;
-    height: 20px;
-    line-height: 20px; /*height和line-height设置一样即可文字垂直居中*/
-    text-align:center;
-    background-color: #E8E8E890;
-    border-radius: 5px;
-}
-.menubox.current {
-    color: #E8E8E8;
-    background-color: #848484;
+label {
+    color: var(--muted);
+    white-space: nowrap;
 }
 
-.menuview {
-    display:none;
+#appRoot {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: env(safe-area-inset-top, 0px) 10px env(safe-area-inset-bottom, 0px);
 }
 
-.menuview.current {
-    display:block;
+#shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+}
+
+#titleBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 54px;
+    padding: 10px 12px;
+    margin: 0 0 10px 0;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(21,33,54,0.92), rgba(11,20,34,0.88));
+    box-shadow: var(--shadow);
+}
+
+.brand-wrap {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.brand-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.brand-badge .green { color: #53db9b; }
+.brand-badge .red { color: #ff7c89; }
+
+.version-tag,
+#crossproc {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+}
+
+#crossproc {
+    max-width: 100%;
+}
+
+#procname {
+    display: inline-block;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+}
+
+.title-sub {
+    color: rgba(237,243,255,0.5);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#closeMenu {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1;
+}
+
+#bodyView {
+    width: 100%;
+    height: calc(100% - 64px);
+    border-collapse: separate;
+    border-spacing: 10px 0;
+    table-layout: fixed;
+}
+
+#bodyView td {
+    padding: 0;
+    vertical-align: top;
+    border: none;
+}
+
+#controlsPane {
+    width: 150px;
+}
+
+.surface {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(18,29,49,0.94), rgba(14,24,40,0.90));
+    box-shadow: var(--shadow);
+}
+
+.controls {
+    height: 100%;
+    padding: 12px;
+    overflow: hidden;
+}
+
+.control-card {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.control-card:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    margin: 0 0 8px 0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.field {
+    margin-bottom: 8px;
+}
+
+.field:last-child {
+    margin-bottom: 0;
+}
+
+.field-label {
+    display: block;
+    margin: 0 0 6px 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.row-grid-2 {
+    display: flex;
+    gap: 8px;
+}
+
+.row-grid-2 > * {
+    flex: 1 1 0;
+}
+
+.radio-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.radio-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.03);
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+#resultsPane .surface {
+    height: 100%;
+    overflow: hidden;
+}
+
+.results-shell {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
+.results-title {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+#results_count {
+    display: none;
+    margin: 0;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: #cfe4ff;
+    font-size: 12px;
+}
+
+#listdiv {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
+    padding: 6px 10px 10px;
 }
-    
-/* 滚动条整体部分 */
+
+#resultList {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    cursor: pointer;
+}
+
+#resultList tr td {
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    color: #f4f8ff;
+    word-break: break-all;
+}
+
+#resultList tr.hilight td {
+    border-color: rgba(103,176,255,0.55);
+    box-shadow: 0 0 0 1px rgba(103,176,255,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+    background: linear-gradient(180deg, rgba(103,176,255,0.14), rgba(103,176,255,0.06));
+}
+
+#resultList td font {
+    display: inline-block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+#resultList tr[data-readonly="true"] td {
+    opacity: 0.9;
+    cursor: default;
+}
+
 .scrollbar {
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
+
 .scrollbar::-webkit-scrollbar {
-    width: 5px; /* 纵向滚动条宽度 */
-    height: 5px;/* 横向滚动条高度 */
-    background-color: #F5F5F5; /* 滚动条整体背景，一般被覆盖着 */
+    width: 5px;
+    height: 5px;
+    background-color: transparent;
 }
-/* 滚动条的轨道（里面装有Thumb） */
+
 .scrollbar::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); /* 滚动条轨道阴影 */
-    /*border-radius: 10px; /* 滚动条轨道圆角 */
-    background-color: #F5F5F5; /* 滚动条轨道背景 */
+    background-color: transparent;
 }
-/* 滚动条里面的滑块 */
+
 .scrollbar::-webkit-scrollbar-thumb {
-    border-radius: 15px; /* 滚动条滑块圆角 */
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3); /* 滚动条滑块阴影 */
-    background-color: #B8B8B8; /* 滚动条滑块颜色 */
+    border-radius: 999px;
+    background-color: rgba(193, 212, 245, 0.28);
 }
 
 .popup_container {
-    position:absolute;
+    position: absolute;
     z-index: 1000;
-    left:50%;
-    top:0;
-}
-    
-#popup_search_edit {
-    display:none;
-    text-align: center;
-    background-color: #FDFDFD;
-    width:200px;
-    height:150px;
-    position:absolute;
-    left:-100px; top:50px;
-    border:1px solid #B8B8B880;
-    border-radius: 5px;
-    padding: 10px;
-}
-    
-#popup_progress {
-    display:none;
-    text-align: center;
-    background-color: #FDFDFD;
-    width:200px;
-    height:20px;
-    position:absolute;
-    left:-100px; top:100px;
-    border:1px solid #B8B8B880;
-    border-radius: 5px;
-    padding: 10px;
-    z-index: 2000;
-}
-    
-#popup_loadscripts {
-    display:none;
-    text-align: center;
-    background-color: #FDFDFD;
-    width:250px;
-    height:220px;
-    position:absolute;
-    left:-125px; top:20px;
-    border:1px solid #B8B8B880;
-    border-radius: 5px;
-    padding: 10px;
-}
-
-#popup_proclist {
-    display:none;
-    text-align: center;
-    background-color: #FDFDFD;
-    width:180px;
-    max-height:200px;
-    position:absolute;
-    left:-90px; top:50px;
-    border:1px solid #B8B8B880;
-    border-radius: 5px;
-    padding: 10px;
-}
-
-#popup_proclist button {
-    display: block;
-    width: 100%;
-    height: 26px;
-    border-radius: 2px;
-    font-weight:bold;
-    color: black;
-    text-align: left;
-    background-color: #00000005;
-}
-
-table.datatype {
-    border: 1px solid red;
-    border-radius: 2px;
-    border-collapse: collapse;
-    border-style:hidden;
-    box-shadow: 0 0 0 1px #3393EF;
-}
-
-.datatype td {
-    cursor: hand;
-    padding: 5px;
-    color: #3393EF;
-    border: 1px solid #3393EF;
-    width: 22px;
-    height: 15px;
-    text-align: center;
-}
-
-.datatype td.selected {
-    color: white;
-    background-color: #3393EF;
+    left: 50%;
+    top: 0;
 }
 
 .maskview {
     display: none;
     position: absolute;
-    left: 0px;
-    top: 0px;
+    left: 0;
+    top: 0;
     width: 100%;
     height: 100%;
-    filter: alpha(opacity=60);
-    background-color: #777;
-    z-index: 1;
-    opacity:0.5;
+    background: rgba(2, 7, 14, 0.66);
+    z-index: 50;
 }
 
-#listdiv {
-    display:block;
-    overflow-x:hidden;
-    overflow-y:scroll;
-    height:100%;
+#popup_search_edit,
+#popup_progress,
+#popup_loadscripts,
+#popup_proclist {
+    display: none;
+    position: absolute;
+    border: 1px solid var(--line-strong);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(20,31,50,0.98), rgba(13,22,37,0.98));
+    color: var(--text);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.42);
 }
 
-#resultList tr.hilight td{
-    color: #3393EF;
+#popup_search_edit {
+    text-align: center;
+    width: 250px;
+    min-height: 188px;
+    left: -125px;
+    top: 52px;
+    padding: 14px;
 }
 
-#resultList td {
-    border-bottom:solid 1px #D1D1D1;
-}
-#resultList td font {
-    font-size:12px;color:#848484
+#popup_progress {
+    text-align: center;
+    width: 220px;
+    min-height: 40px;
+    left: -110px;
+    top: 100px;
+    padding: 14px;
+    z-index: 2000;
 }
 
+#popup_loadscripts {
+    text-align: center;
+    width: 280px;
+    height: 255px;
+    left: -140px;
+    top: 18px;
+    padding: 12px;
+}
+
+#popup_proclist {
+    text-align: center;
+    width: 210px;
+    max-height: 240px;
+    left: -105px;
+    top: 50px;
+    padding: 12px;
+}
+
+#popup_proclist button {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+    margin: 0 0 8px 0;
+    border-radius: 12px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: left;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+#popup_proclist button:last-child {
+    margin-bottom: 0;
+}
+
+.menubox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 86px;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.menubox.current {
+    color: #f4f8ff;
+    background: linear-gradient(180deg, rgba(103,176,255,0.22), rgba(103,176,255,0.10));
+    border-color: rgba(103,176,255,0.3);
+}
+
+.menuview {
+    display: none;
+}
+
+.menuview.current {
+    display: block;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.loadscripts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.popup-close {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1;
+}
+
+#localjslist {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+#localjslist td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.03);
+}
+
+#localjslist td:first-child {
+    border-right: none !important;
+    border-radius: 12px 0 0 12px;
+    text-align: left;
+}
+
+#localjslist td:last-child {
+    border-left: none !important;
+    border-radius: 0 12px 12px 0;
+    width: 62px !important;
+}
+
+table.datatype {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 6px;
+}
+
+.datatype td {
+    cursor: pointer;
+    padding: 8px 0;
+    color: #cfe2ff;
+    border: 1px solid rgba(103,176,255,0.22);
+    border-radius: 12px;
+    text-align: center;
+    background: rgba(255,255,255,0.03);
+}
+
+.datatype td.selected {
+    color: #fff;
+    background: linear-gradient(180deg, rgba(103,176,255,0.28), rgba(103,176,255,0.12));
+    border-color: rgba(103,176,255,0.46);
+}
+
+.datatype tr.datatype-string td {
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.datatype td.placeholder,
+.datatype td.disabled {
+    border-color: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.18);
+    cursor: default;
+    pointer-events: none;
+    background: rgba(255,255,255,0.01);
+}
+
+.popup-divider {
+    margin: 10px 0 0 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#netjsurl {
+    margin-top: 18px;
+}
+
+#maskview_script {
+    z-index: 1200;
+}
+
+@media (max-width: 720px) {
+    #bodyView {
+        display: block;
+        height: calc(100% - 64px);
+        border-spacing: 0;
+    }
+
+    #bodyView tbody,
+    #bodyView tr,
+    #bodyView td {
+        display: block;
+        width: 100% !important;
+    }
+
+    #controlsPane {
+        height: auto;
+        margin-bottom: 10px;
+    }
+
+    .controls {
+        max-height: 45%;
+        overflow-y: auto;
+    }
+
+    #resultsPane {
+        height: calc(55% - 10px);
+    }
+
+    #resultsPane .surface {
+        height: 100%;
+    }
+}
 </style>
 
 <script>
-
 var h5gg_jquery_stub;
+
+var NUMERIC_TYPES = ["F32","F64","I8","I16","I32","I64"];
+var STRING_TYPES = ["utf8","utf16"];
+var stringEditNoticeShown = false;
+
+function getSelectedDatatype()
+{
+    var selected = $("table#datatype td.selected").data("type");
+    if(selected && NUMERIC_TYPES.indexOf(selected) !== -1)
+        return selected;
+    return "I32";
+}
 
 if(typeof $ == 'undefined')
     document.write("<script src=\"https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js\"><\/script>");
 
-//根据选择的有符号/无符号数确定搜索类型
 function h5ggType(type)
 {
     if($("input:radio[name=numtype]:checked").val()=="unsigned") {
@@ -335,98 +762,89 @@ function h5ggType(type)
                 return "U64";
         }
     }
-    
     return type;
 }
 
-    
-//页面显示完毕事件
 document.addEventListener("DOMContentLoaded", function(){
-
     if(typeof $ == 'undefined') {
         alert("jquery load failed!");
         return;
     }
 
-    /*禁止文本选择和拖动*/
     document.body.onselectstart = document.body.ondrag = function(){
         return false;
-    }
-    //文本框等输入完毕后页面自动滚动到顶部
+    };
+
     $("input").blur(function(){
         window.scroll(0,0);
     });
-    
-    //激活webkit的button:active
+
     document.body.addEventListener('touchstart', function () {});
-    
-    //绑定菜单点击切换子页面
+
     $("div.menubox").unbind('click').click(function(){
         $("div.menubox").removeClass("current");
         $("div.menuview").removeClass("current");
         $(this).addClass("current");
-        
+
         var menuid = $(this).attr("menu");
         $("div#"+menuid).addClass("current");
     });
-    
+
     $("#datavalue").focus(function(){
         var input = $(this);
+        if(!input.data("number-mode"))
+            return;
         input.attr("type","number");
         setTimeout(function(){
             input.attr("type","text");
         }, 500);
     });
-    
-    
+
     $("#crossproc").click(function() {
         $("#popup_proclist").show();
         $("#maskview").show();
     });
-        
+
     if(typeof h5gg!='undefined')
     {
-        
         $("#version").text(h5gg_internel_version);
-        
-        //清除设计演示的结果列表
         onClickClearResults();
-    
-        //设置标题栏区域可拖动悬浮窗
+
         setWindowDrag(0, 0, 400, 80);
-        
-        //布局调整函数
+
         setLayoutAction(function(w,h) {
-            var width = 370; var height = 370; //默认尺寸
-            if(w<h) {
-                height = 600; //竖屏模式加大显示高度
+            var width = 390; var height = 760;
+            if(w < h) {
+                width = Math.min(420, w);
+                height = Math.min(760, h);
+            } else {
+                width = Math.min(900, w);
+                height = Math.min(520, h);
             }
-            width = Math.min(width, w); //适配iPad浮窗, 最大宽度不超出
-            height = Math.min(height, h); //适配老设备, 最大高度不超出
-            var x = (w-width)/2;
-            var y = (h-height)/2;
-            if(w<h) {
-                y = Math.max(20, y);
-                height = Math.min(height, h-y);
+            var x = (w - width) / 2;
+            var y = (h - height) / 2;
+            if(w < h) {
+                y = Math.max(10, y);
+                height = Math.min(height, h - y);
             }
-            setWindowRect(x,y,width,height);
+            setWindowRect(x, y, width, height);
         });
 
         var checkprocs = function()
         {
             var procs = h5gg.getProcList();
-            if(procs)  //不为空(null)说明是具有跨进程权限
+            if(procs)
             {
                 refreshProcList(procs);
                 $("#crossproc").show();
                 $("#closeMenu").hide();
-                
+
                 if(!$("#procname").attr('pid')) {
                     $("#popup_proclist").show();
                     $("#maskview").show();
                     $("#procname").text('');
                 }
-                
+
                 setInterval(function(){
                     if($("#popup_proclist").is(":visible"))
                         refreshProcList(h5gg.getProcList());
@@ -437,61 +855,65 @@ document.addEventListener("DOMContentLoaded", function(){
                         var alive = false;
                         for(var i=0; i<procs.length; i++) {
                             if(procs[i].pid == $("#procname").attr('pid')) {
-                                alive=true;
+                                alive = true;
                                 break;
                             }
                         }
-                        
+
                         if(!alive) {
                             alert("Target process terminated\n\nPlease click on the title bar to select a new target");
                             $("#procname").removeAttr('pid');
                             $("#procname").text('');
                         }
                     }
-                    
                 }, 1500);
-                
-            } else  {
+            } else {
                 $("#crossproc").hide();
             }
-            
-        }; //end of checkprocs
-        
+        };
+
         checkprocs();
-        //setInterval(checkprocs, 1500);
-    
-    } //end of h5gg check
-    
-    //点击结果列表里面的地址时弹出修改窗口, 要在listdiv刷新html之后绑定
+    }
+
     $("table#resultList").on('click','tr', function()
     {
+        var datatype = $(this).attr("datatype");
+        if(datatype==='utf8' || datatype==='utf16') {
+            if(!stringEditNoticeShown) {
+                alert("String results are read-only and cannot be edited.");
+                stringEditNoticeShown = true;
+            }
+            return;
+        }
+
         $("table#resultList tr").removeClass("hilight");
         $(this).addClass("hilight");
-        
+
         var address = $(this).attr("address");
-        var datatype = $(this).attr("datatype");
         var datavalue = $(this).attr("datavalue");
-        
-        //读取该地址最新数据
+
         if(typeof h5gg!='undefined')
             datavalue = h5gg.getValue(address, h5ggType(datatype));
-        
+
         showPopView("&nbsp;&nbsp;Edit&nbsp;&nbsp;", function(type, value){
-            
             if(!h5gg.setValue(address, value, h5ggType(type))) {
                 alert("The modification failed, the address may be invalid!");
             }
-            
             onClickRefreshResults();
-            
-        }, datatype, datavalue);
+        }, {
+            presetType: datatype,
+            presetValue: datavalue,
+            allowedTypes: NUMERIC_TYPES,
+            actionLabel: "Save",
+            numberMode: true
+        });
     });
 });
 
 function refreshProcList(procs)
 {
     $("#proctable button").remove();
-    
+
     for(var i=0; i<procs.length; i++) {
         var proc = procs[i];
         var btn = $("<button>"+proc.name+"</button>");
@@ -502,15 +924,15 @@ function refreshProcList(procs)
                 alert("Cannot Select Target!");
                 return;
             }
-            
+
             onClickClearResults();
-            
+
             $("#procname").attr('pid', $(this).attr('pid'));
             $("#procname").text($(this).text());
             $("#popup_proclist").hide();
             $("#maskview").hide();
         });
-        
+
         $("#proctable").append(btn);
     }
 }
@@ -518,19 +940,18 @@ function refreshProcList(procs)
 function refreshLocalSrcipts()
 {
     $("table#localjslist tr").remove();
-    
+
     var jsfiles = h5gg.getLocalScripts();
 
     setTimeout(function(){
-        
         if(jsfiles.length==0) {
-            $("table#localjslist tbody").append("<tr><td colspan=2>Searching App's Documents Directory...<br/>Searching .app Bundle Directory...<br/>No (*.js) or (*.html) files found!</td></td>");
+            $("table#localjslist tbody").append("<tr><td colspan=2>Searching App's Documents Directory...<br/>Searching .app Bundle Directory...<br/>No (*.js) or (*.html) files found!</td></tr>");
         }
-        
-        $("table#localjslist tbody").append('<tr><td style="border-right-style:none; color:blue">Browser on File App</td><td style="border-left-style:none;width:45px"><button onclick="h5gg.pickScriptFile(onClickLoadScript)">Load</button></td></tr>');
-        
+
+        $("table#localjslist tbody").append('<tr><td style="border-right-style:none; color:#8fc1ff">Browser on File App</td><td style="border-left-style:none;width:62px"><button onclick="h5gg.pickScriptFile(onClickLoadScript)">Load</button></td></tr>');
+
         for(var i=0; i<jsfiles.length; i++) {
-            var row = '<tr><td style="border-right-style:none;font-weight:bold;color:green">'+jsfiles[i].name+'</td><td style="border-left-style:none;width:45px"><button onclick="onClickLoadScript(\''+jsfiles[i].path+'\')">Load</button></td></tr>';
+            var row = '<tr><td style="border-right-style:none;font-weight:bold;color:#6fe09f">'+jsfiles[i].name+'</td><td style="border-left-style:none;width:62px"><button onclick="onClickLoadScript(\''+jsfiles[i].path+'\')">Load</button></td></tr>';
             $("table#localjslist tbody").append(row);
         }
     }, 300);
@@ -541,7 +962,7 @@ function onShowLoadScript(show)
     if(show) {
         $("#maskview").show();
         $("#popup_loadscripts").show();
-        
+
         if(typeof h5gg!='undefined') refreshLocalSrcipts();
     } else {
         $("#maskview").hide();
@@ -552,9 +973,9 @@ function onShowLoadScript(show)
 function onClickLoadScript(url, type)
 {
     if(!url) return;
-    
+
     if(/^\w+\:/.test(url)==false) url = "file://"+url;
-    
+
     try{
         url = new URL(url);
         url.searchParams.append("_", Math.random());
@@ -562,25 +983,24 @@ function onClickLoadScript(url, type)
         alert("invliad URL!");
         return;
     }
-    
+
     $("#popup_progress").show();
     $("#maskview_script").show();
-    
+
     if(type=='h5' || (!type&&!/\.js$/.test(url.pathname))) {
         window.location = url.href;
         return;
     }
-    
-    var script = document.createElement("script");
 
+    var script = document.createElement("script");
     script.type = "text/javascript";
-    
+
     script.onload = function () {
-      alert("JS Run Complete!");
+        alert("JS Run Complete!");
         $("#popup_progress").hide();
         $("#maskview_script").hide();
     };
-    
+
     script.onerror = function () {
         alert("Load Error!\nURL Invalid or Network Exception!");
         $("#popup_progress").hide();
@@ -591,53 +1011,102 @@ function onClickLoadScript(url, type)
     document.body.appendChild(script);
 }
 
-
-//弹出搜索或修改窗口
 function showPopView(name, action, type, value)
 {
+    var defaults = {
+        presetType: null,
+        presetValue: undefined,
+        allowedTypes: null,
+        maxLength: null,
+        inputPlaceholder: null,
+        inputType: "text",
+        actionLabel: null,
+        numberMode: true
+    };
+
+    if(typeof type === 'object' && type !== null) {
+        defaults = Object.assign(defaults, type);
+    } else {
+        defaults.presetType = type || null;
+        defaults.presetValue = value;
+    }
+
     $("#maskview").show();
     $("#popup_search_edit").show();
     $("#popup_search_edit").find("B#titleBar").html(name);
-    $("#popup_search_edit").find("button#action").html(name);
-    
-    if(type) {
-        $("table#datatype td").each(function(){
-            if($(this).text()==type)
-                $(this).addClass("selected");
-            else
-                $(this).removeClass("selected");
-        });
+    $("#popup_search_edit").find("button#action").html(defaults.actionLabel || name);
+
+    var $cells = $("table#datatype td[data-type]");
+    var allowed = defaults.allowedTypes;
+    var typeToUse = defaults.presetType;
+
+    $cells.each(function(){
+        var cellType = $(this).data("type");
+        var isAllowed = !allowed || allowed.indexOf(cellType) !== -1;
+        $(this).toggleClass("disabled", !isAllowed);
+        if(!isAllowed && $(this).hasClass("selected")) {
+            $(this).removeClass("selected");
+        }
+    });
+
+    if(!typeToUse || (allowed && allowed.indexOf(typeToUse) === -1)) {
+        if(allowed && allowed.length) {
+            typeToUse = allowed[0];
+        } else if($cells.length) {
+            typeToUse = $cells.first().data("type");
+        }
     }
-    
-    if(value) {
-        $("input#datavalue").val(value);
+
+    if(typeToUse) {
+        $cells.removeClass("selected");
+        $cells.filter(function(){
+            return $(this).data("type") === typeToUse;
+        }).first().addClass("selected");
     }
-    
-    $("input#datavalue").focus();
-    
+
+    var $input = $("input#datavalue");
+    if(typeof defaults.presetValue !== 'undefined') {
+        $input.val(defaults.presetValue);
+    } else {
+        $input.val("");
+    }
+
+    if(defaults.maxLength) {
+        $input.attr("maxlength", defaults.maxLength);
+    } else {
+        $input.removeAttr("maxlength");
+    }
+
+    $input.attr("placeholder", defaults.inputPlaceholder || (allowed ? "String" : "Number"));
+    $input.attr("type", defaults.inputType || "text");
+    $input.data("number-mode", !!defaults.numberMode);
+    $input.attr("inputmode", defaults.numberMode ? "decimal" : "text");
+    $input.focus();
+
     $("#popup_search_edit").find("button#action").unbind("click").click(function(){
-        var type = $("table#datatype td.selected").text();
-        var value = $("input#datavalue").val();
-        
+        var selectedType = $("table#datatype td.selected").data("type");
+        var val = $("input#datavalue").val();
+
         $("#popup_search_edit").hide();
         $("#popup_progress").show();
-        
+
         setTimeout(function() {
-            
-            action(type, value);
-            
+            action(selectedType, val);
             $("#popup_progress").hide();
             $("#maskview").hide();
         }, 200);
-        
     });
-    
+
     $("#popup_search_edit").find("button#cancel").unbind("click").click(function(){
         $("#maskview").hide();
         $("#popup_search_edit").hide();
     });
-    
+
     $("table#datatype td").unbind("click").click(function(){
+        var cellType = $(this).data("type");
+        if(!cellType || $(this).hasClass("disabled"))
+            return;
+
         $("table#datatype td").removeClass("selected");
         $(this).addClass("selected");
         $("input#datavalue").focus();
@@ -657,291 +1126,366 @@ function loadResults(from, count)
 {
     var maxCount = count;
     var skipCount = from;
-    
+
     var results = h5gg.getResults(maxCount, skipCount);
-    
-    //alert("count"+count+":"+results.length+":"+results[0].address);
-    
+
     for(var i=0; i<results.length; i++)
     {
-        if(results[i].type=='F32' || results[i].type=='F64')
-            results[i].value = '('+results[i].value+')';
-        var row = '<tr address="'+results[i].address+'" datatype="'+results[i].type+'" datavalue="'+results[i].value+'"><td>'+(from+i+1)+'. '+results[i].address+'<br/><font>'+results[i].value+'</font></td></tr>';
-        
+        var type = results[i].type;
+        var value = results[i].value;
+        var isStringType = (type=='utf8' || type=='utf16');
+        var displayValue = value;
+        if(isStringType)
+            displayValue = '"'+value+'"';
+        else if(type=='F32' || type=='F64')
+            displayValue = '('+value+')';
+
+        var attrs = ' address="'+results[i].address+'" datatype="'+type+'" datavalue="'+value+'"';
+        if(isStringType)
+            attrs += ' data-readonly="true"';
+        var row = '<tr'+attrs+'><td>'+(from+i+1)+'. '+results[i].address+'<br/><font>'+displayValue+'</font></td></tr>';
+
         $("table#resultList tbody").append(row);
     }
 }
 
 function onClickRefreshResults(clean)
 {
-   $("table#resultList tr").remove();
-   
-   if(clean) {
-       $("#listdiv").get(0).scroll(0,0);
-       $("table#resultList").attr("currentCount", 0);
-   }
+    $("table#resultList tr").remove();
+
+    if(clean) {
+        $("#listdiv").get(0).scroll(0,0);
+        $("table#resultList").attr("currentCount", 0);
+    }
 
     var count = h5gg.getResultsCount();
-    $("#results_count").text("Results Count: "+count);
+    $("#results_count").text("Results: "+count);
     $("#results_count").show();
-    
+
     var currentCount = Number($("table#resultList").attr("currentCount"));
     if(isNaN(currentCount) || currentCount==0) {
         currentCount = 100;
         $("table#resultList").attr("currentCount", 100);
     }
-    
+
     loadResults(0, currentCount);
 }
 
 function loadMoreResults() {
-    console.log("load more data!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"+Math.random());
-    
-    //当前显示数量
     var currentCount = Number($("table#resultList").attr("currentCount"));
-    
-    //每次增加显示100条
     $("table#resultList").attr("currentCount", currentCount+100);
-    
     loadResults(currentCount, 100);
 }
 
 function showMoreResults(div)
 {
     var lh = div.scrollHeight - div.scrollTop;
-    console.log(div.clientHeight+","+div.offsetHeight +" : " +div.scrollTop+","+div.scrollHeight + " : " + lh);
-    
     if(lh <= div.clientHeight) {
-        console.log("trigger bottom!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         loadMoreResults();
     }
 }
 
 function onClickEditAll()
 {
-    /*
-    if($("table#resultList tr").length==0) {
-        alert("没有可修改的数据");
-        return;
-    }*/
-    
     showPopView("EditAll", function(type, value){
-
         var count = h5gg.editAll(value, h5ggType(type));
-        
         onClickRefreshResults();
-        
         alert("Success to modify count: "+count);
+    }, {
+        allowedTypes: NUMERIC_TYPES,
+        actionLabel: "Apply",
+        presetType: getSelectedDatatype(),
+        numberMode: true
+    });
+}
+
+function onClickSearchString()
+{
+    showPopView("Search String", function(type, value) {
+        if(!value) {
+            alert("Please enter a string value (max 64 chars).");
+            return;
+        }
+        var memoryFrom = $("input#range_min").val();
+        var memoryTo = $("input#range_max").val();
+        h5gg.searchNumber(value, type, memoryFrom, memoryTo);
+        onClickRefreshResults(true);
+    }, {
+        allowedTypes: STRING_TYPES,
+        maxLength: 64,
+        inputPlaceholder: "Enter UTF text (max 64 chars)",
+        actionLabel: "Search",
+        presetType: STRING_TYPES[0],
+        presetValue: "",
+        numberMode: false
+    });
+}
+
+function onClickSearchNearbyString()
+{
+    showPopView("Search String", function(type, value){
+        if(!value) {
+            alert("Please enter a string value (max 64 chars).");
+            return;
+        }
+        var nearbyRange = $("input#nearby_range").val();
+        h5gg.searchNearby(value, type, nearbyRange);
+        onClickRefreshResults(true);
+    }, {
+        allowedTypes: STRING_TYPES,
+        maxLength: 64,
+        inputPlaceholder: "Enter UTF text (max 64 chars)",
+        actionLabel: "Search",
+        presetType: STRING_TYPES[0],
+        presetValue: "",
+        numberMode: false
     });
 }
 
 function onClickSearchNumber()
 {
     showPopView("Search Number", function(type, value) {
-        
         h5gg.setFloatTolerance($("#float_tolerance").val());
-        
         var memoryFrom = $("input#range_min").val();
         var memoryTo = $("input#range_max").val();
         h5gg.searchNumber(value, h5ggType(type), memoryFrom, memoryTo);
-        
         onClickRefreshResults(true);
+    }, {
+        allowedTypes: NUMERIC_TYPES,
+        actionLabel: "Search",
+        presetType: getSelectedDatatype(),
+        numberMode: true
     });
 }
 
 function onClickSearchNearby()
 {
-    /*
-    if($("table#resultList tr").length==0) {
-        alert("没有可继续搜索的数据");
-        return;
-    }*/
-    
     showPopView("Nearby Search", function(type, value){
-        
         h5gg.setFloatTolerance($("#float_tolerance").val());
-        
+
         var nearbyRange = $("input#nearby_range").val();
         h5gg.searchNearby(value, h5ggType(type), nearbyRange);
-        
+
         onClickRefreshResults(true);
+    }, {
+        allowedTypes: NUMERIC_TYPES,
+        actionLabel: "Search",
+        presetType: getSelectedDatatype(),
+        numberMode: true
     });
 }
-    
+
 function onClickMakeTweak()
 {
     alert("Make your custom dylib\n\nStep 1: Select a picture file for float button");
     h5gg.pickScriptFile(function(icon){
-        
         alert("Step 2: Select a html file that needs to load automatically");
-        
         h5gg.pickScriptFile(function(html) {
-            
             alert(h5gg.makeTweak(icon, html));
-            
         }, ["public.html"]);
-        
     }, ["public.image"]);
 }
-
 </script>
-
 </head>
-<body bgcolor="#E8E8E8" style="margin:0;">
-<!--标题栏-->
-<div id="titleBar" style="background-color:#D1D1D1; padding:5px; margin:0px; height:12px">
-&nbsp;<font style="color:green">H5</font> <font style="color:red">GG</font>&nbsp;v<span id="version"></span>
-<span id="crossproc" style="display:none">
-<font style="color:blue">&nbsp;CrossProc&nbsp;</font><font id="procname">procname</font>
-</span>
-    
-<div id="closeMenu" style="float:right; font-size:16px; line-height:14px; font-family: Arial, sans-serif;" onclick="setWindowVisible(false)">&nbsp;X&nbsp;</div>
+<body>
+<div id="appRoot">
+    <div id="shell">
+        <div id="titleBar">
+            <div class="brand-wrap">
+                <div class="brand-row">
+                    <div class="brand-badge"><span class="green">H5</span><span class="red">GG</span></div>
+                    <div class="version-tag">v<span id="version"></span></div>
+                    <span id="crossproc" style="display:none"><span style="color:#8fc1ff">CrossProc</span><span id="procname">procname</span></span>
+                </div>
+                <div class="title-sub">Memory scan workspace</div>
+            </div>
+            <div id="closeMenu" onclick="setWindowVisible(false)">×</div>
+        </div>
+
+        <table id="bodyView">
+            <tr>
+                <td id="controlsPane">
+                    <div class="surface controls">
+                        <div class="control-card">
+                            <p class="section-title">Memory Range</p>
+                            <div class="field">
+                                <span class="field-label">Start</span>
+                                <input id="range_min" value="0x00000000" />
+                            </div>
+                            <div class="field">
+                                <span class="field-label">End</span>
+                                <input id="range_max" value="0x200000000" />
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <p class="section-title">Number Mode</p>
+                            <div class="radio-row">
+                                <label class="radio-pill"><input type="radio" name="numtype" value="signed" checked />Signed</label>
+                                <label class="radio-pill"><input type="radio" name="numtype" value="unsigned" />Unsigned</label>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <p class="section-title">Search</p>
+                            <div class="action-grid">
+                                <button onclick="onClickSearchNumber()">Search</button>
+                                <button onclick="onClickSearchNearby()">Nearby</button>
+                                <button onclick="onClickSearchString()">String</button>
+                                <button onclick="onClickSearchNearbyString()">Near Str</button>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <p class="section-title">Results</p>
+                            <div class="action-grid">
+                                <button onclick="onClickClearResults()">Clear</button>
+                                <button onclick="onClickEditAll()">Edit All</button>
+                                <button onclick="onClickRefreshResults()">Refresh</button>
+                                <button onclick="onShowLoadScript(true)">Scripts</button>
+                            </div>
+                            <div class="field" style="margin-top:8px;">
+                                <button style="width:100%;" onclick="onClickMakeTweak()">Make Tweak</button>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <p class="section-title">Scan Options</p>
+                            <div class="field">
+                                <span class="field-label">Nearby Range</span>
+                                <input id="nearby_range" value="0x100" />
+                            </div>
+                            <div class="field">
+                                <span class="field-label">Float Tolerance</span>
+                                <input id="float_tolerance" value="0.0" />
+                            </div>
+                        </div>
+                    </div>
+                </td>
+
+                <td id="resultsPane">
+                    <div class="surface results-shell">
+                        <div class="results-header">
+                            <div class="results-title">Result List</div>
+                            <p id="results_count">Results: 0</p>
+                        </div>
+
+                        <div id="listdiv" class="scrollbar" ontouchend="showMoreResults(this);">
+                            <table id="resultList">
+                                <tbody>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>1. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>2. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>3. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>4. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>5. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>6. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>7. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>8. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>9. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>10. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>11. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>12. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>13. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>14. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>15. 0x102345678<br/><font>112233</font></td></tr>
+                                    <tr address="0x012345678" datatype="F64" datavalue="123"><td>16. 0x102345678<br/><font>0.112233112233112233112233112233112233</font></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div id="maskview" class="maskview"></div>
+
+        <div class="popup_container">
+            <div id="popup_search_edit">
+                <b id="titleBar">Search Number</b>
+                <div style="height:10px"></div>
+                <table id="datatype" class="datatype">
+                    <tr class="datatype-numeric">
+                        <td data-type="F32">F32</td>
+                        <td data-type="F64">F64</td>
+                        <td data-type="I8">I8</td>
+                        <td data-type="I16">I16</td>
+                        <td data-type="I32" class="selected">I32</td>
+                        <td data-type="I64">I64</td>
+                    </tr>
+                    <tr class="datatype-string">
+                        <td data-type="utf8">UTF8</td>
+                        <td data-type="utf16">UTF16</td>
+                        <td class="placeholder"></td>
+                        <td class="placeholder"></td>
+                        <td class="placeholder"></td>
+                        <td class="placeholder"></td>
+                    </tr>
+                </table>
+                <div style="height:10px"></div>
+                <input type="text" id="datavalue" placeholder="Number" />
+                <hr class="popup-divider"/>
+                <div class="popup-actions">
+                    <button id="cancel">Cancel</button>
+                    <button id="action">Search</button>
+                </div>
+            </div>
+
+            <div id="popup_loadscripts" class="popup_view3">
+                <div class="loadscripts-header">
+                    <div>
+                        <div class="menubox current" menu="localjs" onclick="refreshLocalSrcipts()">Local ⟳</div>
+                        <div class="menubox" menu="netjs">Network</div>
+                    </div>
+                    <div class="popup-close" onclick="onShowLoadScript(false)">×</div>
+                </div>
+                <hr class="popup-divider"/>
+
+                <div id="localjs" class="menuview current scrollbar" style="height:190px">
+                    <table id="localjslist">
+                        <tbody>
+                            <tr><td style="border-right-style:none; color:#8fc1ff">Choose from file app</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                            <tr><td style="border-right-style:none;">test-script-1.js</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                            <tr><td style="border-right-style:none;">test-script-1.js</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                            <tr><td style="border-right-style:none;">test-script-1.js</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                            <tr><td style="border-right-style:none;">test-script-1.js</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                            <tr><td style="border-right-style:none;">test-script-1.js</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                            <tr><td style="border-right-style:none;">test-script-1.js</td><td style="border-left-style:none;width:62px"><button>Load</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="netjs" class="menuview">
+                    <input id="netjsurl" placeholder="https://h5ggexample.com/script.js" />
+                    <div style="height:22px"></div>
+                    <hr class="popup-divider"/>
+                    <div class="popup-actions">
+                        <button onclick="onClickLoadScript($('#netjsurl').val(), 'js')">Load JS</button>
+                        <button onclick="onClickLoadScript($('#netjsurl').val(), 'h5')">Load HTML</button>
+                    </div>
+                </div>
+
+                <div id="maskview_script" class="maskview"></div>
+            </div>
+
+            <div id="popup_progress">
+                <center>Running...</center>
+            </div>
+
+            <div id="popup_proclist">
+                <center>
+                    <div style="font-weight:700;">Select Target</div>
+                    <hr class="popup-divider"/>
+                    <div id="proctable" class="scrollbar" style="min-height:50px; max-height:170px">
+                        <button>Process1</button>
+                        <button>Process2</button>
+                        <button>Process3</button>
+                        <button>Process4</button>
+                        <button>Process5</button>
+                    </div>
+                </center>
+            </div>
+        </div>
+    </div>
 </div>
-<!--用一个表格来布局左右两栏-->
-<table id="bodyView" width="100%" style="table-layout:fixed;height: calc(100% - 22px) ;">
-<tr>
-<td style="vertical-align:top;width:135px;border-right:solid 2px #D1D1D1;">
-<div>
-MemStart:<input id="range_min" style="width:76px;padding-left:0" value="0x00000000" />
-<br/>
-MemEnd:<input id="range_max" style="width:80px;padding-left:0"  value="0x200000000" />
-<br/>
-<label><input type=radio name="numtype" value="signed" checked />Signed</label>
-<label><input type=radio name="numtype" value="unsigned" />UnSigned</label>
-<br/>
-<button onclick="onClickSearchNumber()">Search</button>
-<button onclick="onClickSearchNearby()">NearbySearch</button>
-<br/>
-<button onclick="onClickClearResults()">Clear</button>
-<button onclick="onClickEditAll()">EditAll</button>
-<button onclick="onClickRefreshResults()">Refresh</button>
-<br/>
-<button onclick="onShowLoadScript(true)">&nbsp;Scripts&nbsp;</button>
-<button onclick="onClickMakeTweak()">&nbsp;MakeTweak&nbsp;</button>
-<br/>
-NearbyRange:<input id="nearby_range" style="width:55px"  value="0x100"/>
-<br/>
-FloatTolerance:<input id="float_tolerance" style="width:50px" value="0.0"/>
-<br/>
-<p id="results_count" style="display:none">Results Count:<span>0</span></p>
-</div>
-</td>
-<td style="vertical-align:top;">
-<div id="listdiv" class="scrollbar" ontouchend="showMoreResults(this);">
-<table id="resultList" style="width:100%;cursor:hand;">
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>1.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>2.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>3.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>4.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>5.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>6.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>7.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>8.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>9.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>10.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>11.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>12.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>13.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>14.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>15.0x102345678<br/><font>112233</td></tr>
-<tr address="0x012345678" datatype="F64" datavalue="123"><td>16.0x102345678<br/><font>0.112233112233112233112233112233112233</td></tr>
-</table>
-</div>
-
-</td>
-</tr>
-</table>
-
-<!--全局灰色遮罩层(弹出搜索框的时候用)-->
-<div id="maskview" class="maskview"></div>
-
-<!--全屏居中布局层-->
-<div class="popup_container">
-    
-<div id="popup_search_edit">
-<B id="titleBar">Search Number</B>
-<br/><br/>
-<center>
-<table id="datatype" class="datatype">
-<tr>
-<td>F32</td><td>F64</td><td>I8</td><td>I16</td><td class="selected">I32</td><td>I64</td>
-</tr>
-</table>
-</center>
-<br/>
-<input type="text" id="datavalue" style="width:100%; border:none" placeholder="Number" />
-<hr/>
-<button id="cancel">Cancel</button>
-&nbsp;&nbsp;&nbsp;
-<button id="action">Search</button>
-</div>
-
-
-<!--居中的加载脚本窗口,默认隐藏-->
-<div id="popup_loadscripts" class="popup_view3">
-<center>
-<div class="menubox current" menu="localjs" onclick="refreshLocalSrcipts()">Local ⟳</div>
-<div class="menubox" menu="netjs">Network</div>
-<div style="float:right; font-size:16px; font-family: Arial, sans-serif;" onclick="onShowLoadScript(false)">&nbsp;X&nbsp;</div>
-</center>
-<hr/>
-<div id="localjs" class="menuview current scrollbar" style="height:190px">
-<table id="localjslist" style="width:100%;" border="1" cellspacing=0 cellpadding=0>
-<tr><td style="border-right-style:none; color:blue">选择其他位置</td><td style="border-left-style:none;width:45px"><button>浏览</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-<tr><td style="border-right-style:none;">测试脚本1.js</td><td style="border-left-style:none;width:45px"><button>加载</button></td></tr>
-</table>
-</div>
-<div id="netjs" class="menuview">
-<br/><br/>
-<input id="netjsurl" style="width:100%" placeholder="URL start with http/https" />
-<br/><br/><br/>
-<hr/>
-<button onclick="onClickLoadScript($('#netjsurl').val(), 'js')">Load JS</button>
-<button onclick="onClickLoadScript($('#netjsurl').val(), 'h5');">Load HTML</button>
-</div>
-
-<!--运行脚本灰色遮罩层(执行脚本时用)-->
-<div id="maskview_script" class="maskview"></div>
-
-</div>
-
-<!--居中的提示框, 默认隐藏-->
-<div id="popup_progress">
-<center>
-    Running...
-</center>
-</div>
-
-<div id="popup_proclist">
-<center>
-Select Target
-<hr/>
-<div id="proctable" class="scrollbar" style="min-height:50px; max-height:170px">
-<button>Process1</button>
-<button>Process2</button>
-<button>Process3</button>
-<button>Process4</button>
-<button>Process5</button>
-<button>Process6</button>
-<button>Process7</button>
-<button>Process8</button>
-</div>
-</center>
-</div>
-
-
-<!--全屏居中布局层结束-->
-</div>
-
 </body>
 </html>
-

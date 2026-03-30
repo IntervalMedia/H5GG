@@ -49,8 +49,8 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 @property BOOL usingCustomDialog;
 @property void(^reloadAction)(void);
 
--(void)setAction:(NSString*)name callback:(id)block;
--(void)setH5ggEngine:(h5ggEngine*)engine;
+- (void)setAction:(NSString*)name callback:(id)block;
+- (void)setH5ggEngine:(h5ggEngine*)engine;
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler;
 - (void)alert:(NSString*)message;
 
@@ -64,6 +64,14 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
     if (self) {
         WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
         WKUserContentController *userContentController = [[WKUserContentController alloc] init];
+        
+        // Inject error handler at document start
+        NSString *initialJS = [NSString stringWithUTF8String:gINITIAL_JSData];
+        WKUserScript *errorHandlerScript = [[WKUserScript alloc] initWithSource:initialJS 
+                                                                  injectionTime:WKUserScriptInjectionTimeAtDocumentStart 
+                                                               forMainFrameOnly:YES];
+        [userContentController addUserScript:errorHandlerScript];
+        
         config.userContentController = userContentController;
 
         self.webView = [[WKWebView alloc] initWithFrame:self.bounds configuration:config];
@@ -345,10 +353,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
                     if (!proc_pidpath([[proc valueForKey:@"pid"] intValue], path, sizeof(path)))
                         continue;
                     
-                    if (strstr(path, "/private/var/") != path && strstr(path, "/var/") != path)
-                        continue;
-                    
-                    if (strstr(path, "/Application/") == NULL)
+                    if (!RBIsUserAppExecutablePath(path))
                         continue;
                     
                     if (!filter || [filter isEqualToString:@""] || 
@@ -421,6 +426,100 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 - (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation {
     NSLog(@"webViewDidStartLoad=%@", webView);
 }
+
+// MARK: - WKUIDelegate Methods
+
+- (void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler {
+    if (self.usingCustomDialog) {
+        // Use custom modal dialog for iOS 13.0-13.3 compatibility
+        [ModalShow alert:Localized(@"提示") message:message InWindow:self.window];
+        completionHandler();
+    } else {
+        // Use system UIAlertController
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil 
+                                                                                 message:message 
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
+        [alertController addAction:[UIAlertAction actionWithTitle:Localized(@"确定") 
+                                                            style:UIAlertActionStyleDefault 
+                                                          handler:^(UIAlertAction *action) {
+            completionHandler();
+        }]];
+        
+        UIViewController *rootVC = self.window.rootViewController;
+        if (rootVC) {
+            [rootVC presentViewController:alertController animated:YES completion:nil];
+        } else {
+            completionHandler();
+        }
+    }
+}
+
+- (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL))completionHandler {
+    if (self.usingCustomDialog) {
+        // Use custom modal dialog for iOS 13.0-13.3 compatibility
+        BOOL result = [ModalShow confirm:message];
+        completionHandler(result);
+    } else {
+        // Use system UIAlertController
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil 
+                                                                                 message:message 
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
+        [alertController addAction:[UIAlertAction actionWithTitle:Localized(@"确定") 
+                                                            style:UIAlertActionStyleDefault 
+                                                          handler:^(UIAlertAction *action) {
+            completionHandler(YES);
+        }]];
+        [alertController addAction:[UIAlertAction actionWithTitle:Localized(@"取消") 
+                                                            style:UIAlertActionStyleCancel 
+                                                          handler:^(UIAlertAction *action) {
+            completionHandler(NO);
+        }]];
+        
+        UIViewController *rootVC = self.window.rootViewController;
+        if (rootVC) {
+            [rootVC presentViewController:alertController animated:YES completion:nil];
+        } else {
+            completionHandler(NO);
+        }
+    }
+}
+
+- (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString * _Nullable))completionHandler {
+    if (self.usingCustomDialog) {
+        // Use custom modal dialog for iOS 13.0-13.3 compatibility
+        NSString *result = [ModalShow prompt:prompt defaultText:defaultText ?: @"" InWindow:self.window];
+        completionHandler(result);
+    } else {
+        // Use system UIAlertController
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil 
+                                                                                 message:prompt 
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
+        [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+            textField.text = defaultText;
+        }];
+        
+        [alertController addAction:[UIAlertAction actionWithTitle:Localized(@"确定") 
+                                                            style:UIAlertActionStyleDefault 
+                                                          handler:^(UIAlertAction *action) {
+            NSString *input = alertController.textFields.firstObject.text;
+            completionHandler(input);
+        }]];
+        [alertController addAction:[UIAlertAction actionWithTitle:Localized(@"取消") 
+                                                            style:UIAlertActionStyleCancel 
+                                                          handler:^(UIAlertAction *action) {
+            completionHandler(nil);
+        }]];
+        
+        UIViewController *rootVC = self.window.rootViewController;
+        if (rootVC) {
+            [rootVC presentViewController:alertController animated:YES completion:nil];
+        } else {
+            completionHandler(nil);
+        }
+    }
+}
+
+// MARK: - WKNavigationDelegate Methods
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
     NSLog(@"webViewDidFinishLoad=%@", webView);

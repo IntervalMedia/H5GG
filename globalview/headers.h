@@ -50,14 +50,14 @@
 //-(NSString*)displayNameForLocation:(NSInteger)location;
 //-(UIImage*)generateIconImage:(int)arg1;
 //@end
-@interface SBApplication
+@interface SBApplication : NSObject
 @property NSString *bundleIdentifier;
 @property NSString *displayIdentifier;
 @property NSString *displayName;
 - (id)mainScene;
 @end
 
-@interface SBApplicationController
+@interface SBApplicationController : NSObject
 + (id)sharedInstance;
 - (id)applicationWithBundleIdentifier:(NSString *)bid;
 - (SBApplication *)applicationWithDisplayIdentifier:(NSString *)identifier;
