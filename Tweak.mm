@@ -99,19 +99,10 @@ FloatButton* floatBtn=NULL;
 FloatMenu* floatH5=NULL;
 h5ggEngine* h5gg = NULL;
 
-NSThread* gWebThread=NULL;
-JSValue* gButtonAction=NULL;
-JSValue* gLayoutAction=NULL;
-
 void onScreenLayoutChange(CGSize size)
 {
     NSLog(@"onScreenLayoutChange=%@", NSStringFromCGSize(size));
-    if(gLayoutAction) [h5gg performSelector:@selector(threadcall:) onThread:gWebThread withObject:^{
-        [gLayoutAction callWithArguments:@[
-            [NSNumber numberWithDouble:size.width],
-            [NSNumber numberWithDouble:size.height],
-        ]];
-    } waitUntilDone:NO];
+    [floatH5 invokeLayoutCallback:size.width height:size.height];
 }
 
 #define NotificationChange CFSTR("com.apple.springboard.lockstate") //锁屏或下滑通知界面
@@ -200,9 +191,7 @@ void SetGlobalView(char* dylib, UInt64 GVDataOffset)
                 
                 PGVSharedData->floatBtnClick = NO;
                 
-                [h5gg performSelector:@selector(threadcall:) onThread:gWebThread withObject:^{
-                    [gButtonAction callWithArguments:nil];
-                } waitUntilDone:NO];
+                [floatH5 invokeButtonCallback];
             }
             
             static BOOL appWindowHandled = NO;
@@ -305,9 +294,7 @@ FloatMenu* initFloatMenu(UIWindow* win)
         return data?YES:NO;
     }];
     
-    [floatH5 setAction:@"setButtonAction" callback:^(JSValue* callback) {
-        gButtonAction = callback;
-        gWebThread = [NSThread currentThread];
+    [floatH5 setAction:@"setButtonAction" callback:^{
         PGVSharedData->customButtonAction = YES;
     }];
     
@@ -361,10 +348,7 @@ FloatMenu* initFloatMenu(UIWindow* win)
         });
     }];
     
-    [floatH5 setAction:@"setLayoutAction" callback:^(JSValue* callback) {
-        gLayoutAction = callback;
-        gWebThread = [NSThread currentThread];
-        
+    [floatH5 setAction:@"setLayoutAction" callback:^{
         dispatch_async(dispatch_get_main_queue(), ^{
             onScreenLayoutChange(win.frame.size);
         });
@@ -372,9 +356,7 @@ FloatMenu* initFloatMenu(UIWindow* win)
     
     floatH5.reloadAction = ^{
         NSLog(@"reloadAction!");
-        gWebThread = nil;
-        gButtonAction = nil;
-        gLayoutAction = nil;
+        PGVSharedData->customButtonAction = NO;
     };
     
     
@@ -566,10 +548,8 @@ void initload()
     } else {
         //三方app中第一次点击图标时再加载H5菜单,防止部分APP不兼容H5导致闪退卡死
          initFloatButton(^(void) {
-             if(gButtonAction) {
-                 [h5gg performSelector:@selector(threadcall:) onThread:gWebThread withObject:^{
-                     [gButtonAction callWithArguments:nil];
-                 } waitUntilDone:NO];
+             if(floatH5 && floatH5.buttonCallbackRegistered) {
+                 [floatH5 invokeButtonCallback];
              } else {
                  bool show = floatWindow ? floatWindow.isHidden : YES;
                  NSLog(@"ButtonShowWindow=%d", show);
