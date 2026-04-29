@@ -10,6 +10,21 @@
 
 
 #import <UIKit/UIKit.h>
+#include "makeWindow.h"
+
+static inline UIWindow *H5GGFloatButtonHostWindow(UIWindow *currentWindow) {
+    if (H5GGWindowIsUsable(currentWindow) && currentWindow.windowLevel == UIWindowLevelNormal) {
+        return currentWindow;
+    }
+
+    for (UIWindow *window in H5GGAllWindows()) {
+        if (H5GGWindowIsUsable(window) && window.windowLevel == UIWindowLevelNormal) {
+            return window;
+        }
+    }
+
+    return H5GGPreferredWindow(currentWindow);
+}
  
 @interface FloatButton : UIImageView
 @property BOOL keepFront;
@@ -48,7 +63,7 @@
                 if(self.keepFront) [self.superview bringSubviewToFront:self];
                 
                 if(!self.keepWindow) {
-                    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+                    UIWindow *window = H5GGFloatButtonHostWindow((UIWindow *)self.superview);
                     if(self.superview != window) [window addSubview:self];
                 }
                 

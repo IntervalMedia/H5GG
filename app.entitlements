@@ -84,8 +84,8 @@
 	<true/>
 	<key>proc_info-allow</key>
 	<true/>
-	<key>application-identifier</key>
-	<string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+		<key>application-identifier</key>
+	<string>com.h5gg.app</string>
 </dict>
 </plist>
 

@@ -9,6 +9,7 @@
 #define ModalShow_h
 
 #include <objc/runtime.h>
+#include "makeWindow.h"
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wobjc-protocol-method-implementation"
@@ -25,8 +26,6 @@
 
 @implementation ModalShow
 
-static dispatch_semaphore_t semaphore;
-
 extern "C"  {
     NSRunLoop* WebThreadNSRunLoop(void);
     void* objc_autoreleasePoolPush();
@@ -36,15 +35,35 @@ extern "C"  {
     void (*WebThreadUnlockFromAnyThread)(void);
 }
 
-+(void)present:(UIViewController*(^)(void))alert InWindow:(UIWindow*)window {
+// Each call gets its own semaphore. The dismiss block is passed into the alert creation
+// block so UIAlertAction handlers capture it directly — no shared state, no deadlocks
+// when modals overlap (e.g. h5gg method error triggers alert while prompt bridge is waiting).
++(void)present:(UIViewController*(^)(void(^dismiss)(void)))alertBuilder InWindow:(UIWindow*)window {
     
     NSLog(@"ModalShow present[%d] %@", [NSThread isMainThread], [NSThread currentThread].name);
     
-    semaphore = dispatch_semaphore_create(0);
+    dispatch_semaphore_t localSemaphore = dispatch_semaphore_create(0);
     
-    void(^submit)() = ^{
+    void(^localDismiss)(void) = ^{
+        dispatch_semaphore_signal(localSemaphore);
+    };
+    
+    void(^submit)(void) = ^{
         NSLog(@"ModalShow running[%d] %@", [NSThread isMainThread], [NSThread currentThread].name);
-        [window.rootViewController presentViewController:alert() animated:YES completion:nil];
+        UIViewController *presenter = H5GGPresenterForWindow(window);
+        if (!presenter) {
+            NSLog(@"ModalShow skipped: no presenter");
+            localDismiss();
+            return;
+        }
+
+        UIViewController *alertController = alertBuilder(localDismiss);
+        if (!alertController) {
+            localDismiss();
+            return;
+        }
+
+        [presenter presentViewController:alertController animated:YES completion:nil];
     };
     
     //NSLog(@"env=%@ %d",  [UIDevice currentDevice].systemVersion, [NSProcessInfo processInfo].isMacCatalystApp);
@@ -52,7 +71,7 @@ extern "C"  {
     if([NSThread isMainThread])
     {
         submit();
-        while(dispatch_semaphore_wait(semaphore, DISPATCH_TIME_NOW))
+        while(dispatch_semaphore_wait(localSemaphore, DISPATCH_TIME_NOW))
             [[NSRunLoop currentRunLoop] runMode:[[NSRunLoop currentRunLoop] currentMode] beforeDate:[NSDate distantFuture]];
     } else {
         dispatch_async(dispatch_get_main_queue(), submit);
@@ -62,38 +81,34 @@ extern "C"  {
         if([[NSThread currentThread].name isEqualToString:@"WebThread"])
             WebThreadUnlockFromAnyThread();
         
-        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        dispatch_semaphore_wait(localSemaphore, DISPATCH_TIME_FOREVER);
     }
 
     NSLog(@"ModalShow dismiss!");
 }
 
-+(void)dismiss {
-    dispatch_semaphore_signal(semaphore);
-}
-
 +(void)alert:(NSString*)title message:(NSString*)message
 {
-    [self alert:title message:message InWindow:[UIApplication sharedApplication].keyWindow];
+    [self alert:title message:message InWindow:H5GGPreferredWindow(nil)];
 }
 
 +(BOOL)confirm:(NSString*)message
 {
-    return [self confirm:message InWindow:[UIApplication sharedApplication].keyWindow];
+    return [self confirm:message InWindow:H5GGPreferredWindow(nil)];
 }
 
 +(NSString*)prompt:(NSString*)text defaultText:(NSString*)defaultText
 {
-    return [self prompt:text defaultText:defaultText InWindow:[UIApplication sharedApplication].keyWindow];
+    return [self prompt:text defaultText:defaultText InWindow:H5GGPreferredWindow(nil)];
 }
 
 +(void)alert:(NSString*)title message:(NSString*)message InWindow:(UIWindow*)window
 {
-    [self present:^() {
+    [self present:^(void(^dismiss)(void)) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
 
         [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            [self dismiss];
+            dismiss();
         }]];
         
         return alert;
@@ -104,17 +119,17 @@ extern "C"  {
 {
     __block BOOL result = NO;
     
-    [self present:^() {
+    [self present:^(void(^dismiss)(void)) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"提示") message:message preferredStyle:UIAlertControllerStyleAlert];
 
         [alert addAction:[UIAlertAction actionWithTitle:Localized(@"确定") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             result = YES;
-            [self dismiss];
+            dismiss();
         }]];
         
         [alert addAction:[UIAlertAction actionWithTitle:Localized(@"取消") style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
             result = NO;
-            [self dismiss];
+            dismiss();
         }]];
     
         return alert;
@@ -126,7 +141,7 @@ extern "C"  {
 +(NSString*)prompt:(NSString*)text defaultText:(NSString*)defaultText InWindow:(UIWindow*)window {
     __block NSString* result;
     
-    [self present:^() {
+    [self present:^(void(^dismiss)(void)) {
         
         UIAlertController* alert = [UIAlertController alertControllerWithTitle:nil message:text preferredStyle:UIAlertControllerStyleAlert];
         
@@ -136,7 +151,12 @@ extern "C"  {
 
         [alert addAction:[UIAlertAction actionWithTitle:Localized(@"确定") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             result = alert.textFields.lastObject.text;
-            [self dismiss];
+            dismiss();
+        }]];
+
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"取消") style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+            result = nil;
+            dismiss();
         }]];
     
         return alert;

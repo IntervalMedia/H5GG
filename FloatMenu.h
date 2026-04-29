@@ -22,11 +22,6 @@
 
 INCTXT(INITIAL_JS, "initial.js");
 
-static NSHashTable* g_webViews = nil;
-
-typedef id (*objc_method_pointer)(id,SEL,...);
-objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
-
 #ifdef __OBJC__
 #include "h5gg.h"
 #endif
@@ -142,6 +137,10 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
         self.buttonCallbackRegistered = NO;
     }
     return self;
+}
+
+- (void)dealloc {
+    [self.webView.configuration.userContentController removeScriptMessageHandlerForName:@"__h5gg_async__"];
 }
 
 -(nullable UIView *)hitTest:(CGPoint)point withEvent:(nullable UIEvent *)event
@@ -296,10 +295,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 {
     dispatch_async(dispatch_get_main_queue(), ^{[self.superview sendSubviewToBack:self];});
 
-    if(self.usingCustomDialog)
-        [ModalShow alert:@"H5GG" message:message InWindow:self.window];
-    else
-        [ModalShow alert:@"H5GG" message:message InWindow:self.window];
+    [ModalShow alert:@"H5GG" message:message InWindow:self.window];
 
     dispatch_async(dispatch_get_main_queue(), ^{[self.superview bringSubviewToFront:self];});
 }
@@ -349,15 +345,36 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 // MARK: - Delegate forwarding
 
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
-    [self.webView evaluateJavaScript:javaScriptString completionHandler:completionHandler];
+    dispatch_block_t block = ^{
+        [self.webView evaluateJavaScript:javaScriptString completionHandler:completionHandler];
+    };
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
 
 - (void)loadRequest:(NSURLRequest *)request {
-    [self.webView loadRequest:request];
+    dispatch_block_t block = ^{
+        [self.webView loadRequest:request];
+    };
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
 
 - (void)loadHTMLString:(NSString *)string baseURL:(nullable NSURL *)baseURL {
-    [self.webView loadHTMLString:string baseURL:baseURL];
+    dispatch_block_t block = ^{
+        [self.webView loadHTMLString:string baseURL:baseURL];
+    };
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
 
 // MARK: - JSON helpers
@@ -401,14 +418,21 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
     @try {
         if ([method isEqualToString:@"require"]) {
-            BOOL r = [self.h5ggInstance require:[args[0] doubleValue]];
-            return r ? @"true" : @"false";
+            if (args.count < 1) return nil;
+            double minver = [args[0] doubleValue];
+            if (H5GG_VERSION < minver) {
+                [(id<H5Alerting>)floatH5 alert:Localized(@"当前H5GG版本过低")];
+                return @"false";
+            }
+            return @"true";
         }
         if ([method isEqualToString:@"setFloatTolerance"]) {
+            if (args.count < 1) return nil;
             [self.h5ggInstance setFloatTolerance:[args[0] description]];
             return nil;
         }
         if ([method isEqualToString:@"searchNumber"]) {
+            if (args.count < 4) return nil;
             [self.h5ggInstance searchNumber:[args[0] description]
                                     param2:[args[1] description]
                                     param3:[args[2] description]
@@ -416,24 +440,29 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
             return nil;
         }
         if ([method isEqualToString:@"searchNearby"]) {
+            if (args.count < 3) return nil;
             [self.h5ggInstance searchNearby:[args[0] description]
                                     param2:[args[1] description]
                                     param3:[args[2] description]];
             return nil;
         }
         if ([method isEqualToString:@"getValue"]) {
+            if (args.count < 2) return nil;
             NSString *result = [self.h5ggInstance getValue:[args[0] description] param2:[args[1] description]];
             return [self jsonStringFromObject:result];
         }
         if ([method isEqualToString:@"setValue"]) {
+            if (args.count < 3) return nil;
             BOOL r = [self.h5ggInstance setValue:[args[0] description] param2:[args[1] description] param3:[args[2] description]];
             return r ? @"true" : @"false";
         }
         if ([method isEqualToString:@"editAll"]) {
+            if (args.count < 2) return nil;
             int count = [self.h5ggInstance editAll:[args[0] description] param3:[args[1] description]];
             return [NSString stringWithFormat:@"%d", count];
         }
         if ([method isEqualToString:@"getResults"]) {
+            if (args.count < 2) return nil;
             int maxCount = [args[0] intValue];
             int skipCount = [args[1] intValue];
             NSArray *results = [self.h5ggInstance getResults:maxCount param1:skipCount];
@@ -484,16 +513,19 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
             return [self jsonStringFromObject:newarr];
         }
         if ([method isEqualToString:@"setTargetProc"]) {
+            if (args.count < 1) return nil;
             pid_t pid = [args[0] intValue];
             BOOL r = [self.h5ggInstance setTargetProc:pid];
             return r ? @"true" : @"false";
         }
         if ([method isEqualToString:@"loadPlugin"]) {
+            if (args.count < 2) return nil;
             NSObject *result = [self.h5ggInstance loadPlugin:[args[0] description] path:[args[1] description]];
             // Cannot bridge arbitrary ObjC objects to WKWebView JS; return description
             return result ? [self jsonStringFromObject:[result description]] : @"null";
         }
         if ([method isEqualToString:@"makeTweak"]) {
+            if (args.count < 2) return nil;
             NSString *result = [self.h5ggInstance makeTweak:[args[0] description] with:[args[1] description]];
             return [self jsonStringFromObject:result];
         }
@@ -632,7 +664,7 @@ objc_method_pointer g_orig_didCreateJavaScriptContext=NULL;
 
     if ([navigationAction.request.URL.scheme isEqualToString:@"file"]) {
         NSError *error = nil;
-        NSString *html = [NSString stringWithContentsOfURL:navigationAction.request.URL encoding:NSASCIIStringEncoding error:&error];
+        NSString *html = [NSString stringWithContentsOfURL:navigationAction.request.URL encoding:NSUTF8StringEncoding error:&error];
         if (html) {
             NSInteger CR_count = [html length] - [[html stringByReplacingOccurrencesOfString:@"\r" withString:@""] length];
             NSInteger CRLF_count = ([html length] - [[html stringByReplacingOccurrencesOfString:@"\r\n" withString:@""] length]) / 2;

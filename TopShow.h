@@ -37,10 +37,7 @@
     return should;
 }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations {
-    UIInterfaceOrientationMask mask = (UIInterfaceOrientationMask)(1<<UIApplication.sharedApplication.statusBarOrientation); //self.lastKeyWindow.rootViewController.supportedInterfaceOrientations;
-    
-    uint64_t mask2 = 1<<UIApplication.sharedApplication.statusBarOrientation;
-    mask = self.followOrientationMask | mask2;
+    UIInterfaceOrientationMask mask = self.followOrientationMask | H5GGCurrentInterfaceOrientationMask(nil);
     
     dumpKeyWindow("TopShow supportedOrientations");
     
@@ -48,7 +45,7 @@
 }
 
 -(UIInterfaceOrientation) preferredInterfaceOrientationForPresentation {
-    UIInterfaceOrientation preferred = UIApplication.sharedApplication.statusBarOrientation; //self.lastKeyWindow.rootViewController.preferredInterfaceOrientationForPresentation;
+    UIInterfaceOrientation preferred = H5GGCurrentInterfaceOrientation(nil);
     
     dumpKeyWindow("TopShow preferredOrientation");
     
@@ -62,7 +59,7 @@
         
         TopShow* rootVC = [TopShow new];
         
-        rootVC.followOrientationMask = UIApplication.sharedApplication.keyWindow.rootViewController.supportedInterfaceOrientations;
+        rootVC.followOrientationMask = H5GGCurrentInterfaceOrientationMask(nil);
         
         
         rootVC.alertWindow = makeWindow(NSStringFromClass(UIWindow.class));

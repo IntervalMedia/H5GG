@@ -60,7 +60,7 @@
     self = [super init];
     if(self) {
         //self.followWindow = UIApplication.sharedApplication.keyWindow;
-        self.followOrientationMask = UIApplication.sharedApplication.keyWindow.rootViewController.supportedInterfaceOrientations;
+        self.followOrientationMask = H5GGCurrentInterfaceOrientationMask(nil);
     }
     return self;
 }
@@ -87,8 +87,7 @@
     if(PGVSharedData->enable && PGVSharedData->viewHosted && PGVSharedData->followCurrentOrientation)
         mask = (UIInterfaceOrientationMask)(1<<PGVSharedData->curOrientation);
     else {
-        uint64_t mask2 = 1<<UIApplication.sharedApplication.statusBarOrientation;
-        mask = self.followOrientationMask | mask2;
+        mask = self.followOrientationMask | H5GGCurrentInterfaceOrientationMask(nil);
     }
     
     dumpKeyWindow("FloatWindow supportedOrientations");
@@ -102,7 +101,7 @@
     if(PGVSharedData->enable && PGVSharedData->viewHosted && PGVSharedData->followCurrentOrientation)
         prefedrred = (UIInterfaceOrientation)PGVSharedData->curOrientation;
     else
-        prefedrred = UIApplication.sharedApplication.statusBarOrientation; //self.followWindow.rootViewController.preferredInterfaceOrientationForPresentation;
+        prefedrred = H5GGCurrentInterfaceOrientation(nil);
 
     dumpKeyWindow("FloatWindow preferredOrientation");
 
@@ -159,7 +158,7 @@
 //        NSLog(@"FloatWindow follow=%@", keyWindow);
 //        ((FloatController*)self.rootViewController).followWindow = keyWindow;
         
-        ((FloatController*)self.rootViewController).followOrientationMask = UIApplication.sharedApplication.keyWindow.rootViewController.supportedInterfaceOrientations;
+        ((FloatController*)self.rootViewController).followOrientationMask = H5GGCurrentInterfaceOrientationMask(nil);
         
         dumpKeyWindow("FloatWindow show");
     }
@@ -182,4 +181,3 @@
 
 
 #endif /* FloatWindow_h */
-

@@ -19,12 +19,11 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #import <JavaScriptCore/JavaScriptCore.h>
-//导入JJ内存搜索引擎头文件(专为H5GG定制)
+// Import JJ memory search engine header file (customized for H5GG)
 #include "MemScan.h"
 #include "TopShow.h"
 #include "crossproc.h"
 #include "version.h"
-// #include "FloatMenu.h"
 // Forward declaration to avoid circular dependency with FloatMenu.h
 #ifdef __OBJC__
 @class FloatMenu;
@@ -396,10 +395,10 @@ JSExportAs(makeTweak, -(NSString*)makeTweak:(NSString*)icon with:(NSString*)html
        *(UInt32*)valuebuf = (UInt32)strtoul([value UTF8String], &pvaluerr, 10);
         JJType = JJ_Search_Type_UInt;
     } else if([type isEqualToString:@"I64"]) {
-       *(int64_t*)valuebuf = strtol([value UTF8String], &pvaluerr, 10);
+       *(int64_t*)valuebuf = strtoll([value UTF8String], &pvaluerr, 10);
         JJType = JJ_Search_Type_SLong;
     } else if([type isEqualToString:@"U64"]) {
-       *(UInt64*)valuebuf = strtoul([value UTF8String], &pvaluerr, 10);
+       *(UInt64*)valuebuf = strtoull([value UTF8String], &pvaluerr, 10);
         JJType = JJ_Search_Type_ULong;
     } else if([type isEqualToString:@"F32"]) {
        *(float*)valuebuf = strtof([value UTF8String], &pvaluerr);

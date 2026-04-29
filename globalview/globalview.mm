@@ -73,19 +73,7 @@ void handleHostView(UIView* view, CGRect newFrame)
     // Adjust frame based on safeAreaInsets if on iOS 15+ to prevent Home Grabber overlap issues
     CGRect targetFrame = newFrame;
     if (@available(iOS 15.0, *)) {
-        UIWindow *keyWindow = nil;
-        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
-            if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *windowScene = (UIWindowScene *)scene;
-                for (UIWindow *window in windowScene.windows) {
-                    if (window.isKeyWindow) {
-                        keyWindow = window;
-                        break;
-                    }
-                }
-            }
-            if (keyWindow) break;
-        }
+        UIWindow *keyWindow = H5GGPreferredWindow(nil);
         if (keyWindow) {
             targetFrame = UIEdgeInsetsInsetRect(newFrame, keyWindow.safeAreaInsets);
         }
@@ -362,11 +350,9 @@ void initload()
     GlobalView = makeWindow(NSStringFromClass(GVWindow.class));
     
     if (@available(iOS 13.0, *)) {
-        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
-            if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
-                GlobalView.windowScene = (UIWindowScene *)scene;
-                break;
-            }
+        UIWindowScene *scene = H5GGPreferredWindowScene(nil);
+        if (scene) {
+            GlobalView.windowScene = scene;
         }
     }
     
@@ -459,7 +445,7 @@ static void* thread_running(void* arg)
         LOGGER("run in main");
         __block NSTimer* timer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer*t){
         LOGGER("run in timer");
-            if(UIApplication.sharedApplication && UIApplication.sharedApplication.keyWindow) {
+            if(UIApplication.sharedApplication && H5GGPreferredWindow(nil)) {
                 LOGGER("run in appdone");
                 [timer invalidate];
                 initload();

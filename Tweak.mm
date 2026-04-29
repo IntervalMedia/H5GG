@@ -3,6 +3,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <pthread.h>
+#include <netinet/in.h>
 #include <dlfcn.h>
 
 #import "RootBridge/Headers/RootBridge.h"
@@ -44,6 +45,9 @@ bool g_testapp_runmode = false;
 bool g_commonapp_runmode = false;
 bool g_systemapp_runmode = false;
 bool g_standalone_runmode = false;
+
+static NSString * const kH5MenuStubMarker = @"H5MENU_STUB_FILE";
+static NSString * const kH5IconStubMarker = @"H5ICON_STUB_FILE";
 
 static inline NSString* NormalizeRootlessPath(NSString* path) {
     if(!path) return nil;
@@ -98,6 +102,94 @@ UIWindow* floatWindow=NULL;
 FloatButton* floatBtn=NULL;
 FloatMenu* floatH5=NULL;
 h5ggEngine* h5gg = NULL;
+UIWindow* appWindow = nil;
+
+static inline UIWindow *H5GGMainApplicationWindow(void) {
+    if (H5GGWindowIsUsable(appWindow) && appWindow != floatWindow) {
+        return appWindow;
+    }
+
+    for (UIWindow *window in H5GGAllWindows()) {
+        if (window != floatWindow && H5GGWindowIsUsable(window) && window.windowLevel == UIWindowLevelNormal) {
+            return window;
+        }
+    }
+
+    UIWindow *fallbackWindow = H5GGPreferredWindow(nil);
+    return fallbackWindow == floatWindow ? nil : fallbackWindow;
+}
+
+static inline NSString *H5GGStubString(const void *bytes)
+{
+    if (!bytes) {
+        return nil;
+    }
+    return [NSString stringWithUTF8String:(const char *)bytes];
+}
+
+static inline BOOL H5GGIsStubMarker(const void *bytes, NSString *marker)
+{
+    NSString *stubString = H5GGStubString(bytes);
+    return stubString && [stubString isEqualToString:marker];
+}
+
+static inline BOOL H5GGHasEmbeddedMenuStub(void)
+{
+    return !H5GGIsStubMarker(gH5MENU_STUB_FILEData, kH5MenuStubMarker);
+}
+
+static inline BOOL H5GGHasEmbeddedIconStub(void)
+{
+    return !H5GGIsStubMarker(gH5ICON_STUB_FILEData, kH5IconStubMarker);
+}
+
+static inline BOOL H5GGHasNetworkRoute(void)
+{
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
+    address.sin_len = sizeof(address);
+    address.sin_family = AF_INET;
+
+    SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithAddress(NULL, (const struct sockaddr *)&address);
+    if (!reachability) {
+        return NO;
+    }
+
+    SCNetworkReachabilityFlags flags = 0;
+    BOOL ok = SCNetworkReachabilityGetFlags(reachability, &flags);
+    CFRelease(reachability);
+
+    if (!ok) {
+        return NO;
+    }
+
+    BOOL reachable = (flags & kSCNetworkReachabilityFlagsReachable) != 0;
+    BOOL needsConnection = (flags & kSCNetworkReachabilityFlagsConnectionRequired) != 0;
+    BOOL autoConnect = (flags & kSCNetworkReachabilityFlagsConnectionOnDemand) != 0 ||
+                       (flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0;
+    BOOL noIntervention = (flags & kSCNetworkReachabilityFlagsInterventionRequired) == 0;
+
+    return reachable && (!needsConnection || (autoConnect && noIntervention));
+}
+
+static inline void H5GGApplyFloatButtonImageData(NSData *data) {
+    if (!data.length || !floatBtn) {
+        return;
+    }
+
+    UIImage *image = [UIImage imageWithData:data];
+    if (!image) {
+        return;
+    }
+
+    floatBtn.image = image;
+    if (data.length <= sizeof(PGVSharedData->buttonImageData)) {
+        PGVSharedData->buttonImageSize = data.length;
+        [data getBytes:PGVSharedData->buttonImageData length:data.length];
+    } else {
+        PGVSharedData->buttonImageSize = 0;
+    }
+}
 
 void onScreenLayoutChange(CGSize size)
 {
@@ -122,8 +214,6 @@ static void screenLockStateChanged(CFNotificationCenterRef center,void* observer
         }
     }
 }
-
-UIWindow* appWindow = nil;
 
 extern "C" __attribute__ ((visibility ("default")))
 void SetGlobalView(char* dylib, UInt64 GVDataOffset)
@@ -171,8 +261,7 @@ void SetGlobalView(char* dylib, UInt64 GVDataOffset)
     PGVSharedData->enable = YES;
     
     
-    NSString* iconstub = [NSString stringWithUTF8String:(char*)gH5ICON_STUB_FILEData];
-    if(iconstub.hash!=0x1fdd7fff7d401bd2 && gH5ICON_STUB_FILESize<=sizeof(PGVSharedData->buttonImageData)) {
+    if(H5GGHasEmbeddedIconStub() && gH5ICON_STUB_FILESize<=sizeof(PGVSharedData->buttonImageData)) {
         PGVSharedData->buttonImageSize = gH5ICON_STUB_FILESize;
         memcpy(PGVSharedData->buttonImageData, gH5ICON_STUB_FILEData, gH5ICON_STUB_FILESize);
     } else {
@@ -202,13 +291,13 @@ void SetGlobalView(char* dylib, UInt64 GVDataOffset)
                 void showFloatWindow(bool show);
                 showFloatWindow(true);//悬浮之后强制显示H5
                 
-                NSLog(@"SetGlobalView=appWindow=%@\n delegateWindow=%@\n windows=%@\n keyWindow=%@", appWindow, UIApplication.sharedApplication.delegate.window, UIApplication.sharedApplication.windows, UIApplication.sharedApplication.keyWindow);
+                NSLog(@"SetGlobalView=appWindow=%@\n delegateWindow=%@\n windows=%@\n activeWindow=%@", appWindow, UIApplication.sharedApplication.delegate.window, H5GGAllWindows(), H5GGPreferredWindow(nil));
                 
                 NSMutableArray* appWindows = [@[appWindow] mutableCopy];
                 
                 //适配定制版APP会创建一个新窗口, 默认的会被隐藏, 但是app的自动旋转是跟随默认的那个窗口
                 //但是这里怎么保证那个新的窗口已经创建出来了???这个时机问题不好把握
-                UIWindow* firstWin = UIApplication.sharedApplication.windows[0];
+                UIWindow* firstWin = H5GGAllWindows().firstObject;
                 if(firstWin!=appWindow && firstWin.isHidden
                    && [NSStringFromClass(firstWin.class) isEqualToString:@"UIWindow"]
                    && [NSStringFromClass(firstWin.rootViewController.class) isEqualToString:@"ViewController"])
@@ -232,13 +321,13 @@ void SetGlobalView(char* dylib, UInt64 GVDataOffset)
                 NSLog(@"SetGlobalView=rotate=%d=>%d", lastOrientation, PGVSharedData->curOrientation);
                 lastOrientation=PGVSharedData->curOrientation;
                 
-                for(UIWindow* win in UIApplication.sharedApplication.windows) {
+                for(UIWindow* win in H5GGAllWindows()) {
                     win.layer.masksToBounds = YES;
                     [win private_updateToInterfaceOrientation:(UIInterfaceOrientation)PGVSharedData->curOrientation animated:NO];
                 }
             }
             
-            if(appWindowHandled && !PGVSharedData->appLoaded && UIApplication.sharedApplication.statusBarOrientation==PGVSharedData->curOrientation)
+            if(appWindowHandled && !PGVSharedData->appLoaded && H5GGCurrentInterfaceOrientation(appWindow)==PGVSharedData->curOrientation)
             {
                 NSLog(@"SetGlobalView=appLoaded");
                 PGVSharedData->appLoaded = YES;
@@ -279,21 +368,38 @@ FloatMenu* initFloatMenu(UIWindow* win)
     //给H5菜单添加一个JS函数setButtonImage用于设置网络图标
     [floatH5 setAction:@"setButtonImage" callback:^(NSString* url) {
         NSURL* imageUrl = [NSURL URLWithString:url];
-        NSData* data = [NSData dataWithContentsOfURL:imageUrl];
-        NSLog(@"setFloatButton=%@", data);
-        //通过主线程执行下面的代码
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if(data) {
-                floatBtn.image = [UIImage imageWithData:data];
-                if(data.length<=sizeof(PGVSharedData->buttonImageData)) {
-                    PGVSharedData->buttonImageSize = data.length;
-                    [data getBytes:PGVSharedData->buttonImageData length:data.length];
-                }
+        if (!imageUrl) {
+            return NO;
+        }
+
+        NSString *scheme = imageUrl.scheme.lowercaseString;
+        if ([imageUrl isFileURL] || [scheme isEqualToString:@"data"]) {
+            NSData *data = [NSData dataWithContentsOfURL:imageUrl];
+            NSLog(@"setFloatButton(local)=%@", data);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                H5GGApplyFloatButtonImageData(data);
+            });
+            return data != nil;
+        }
+
+        if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"]) {
+            return NO;
+        }
+
+        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:imageUrl
+                                                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            NSLog(@"setFloatButton(remote)=%@ error=%@", response, error);
+            if (!data || error) {
+                return;
             }
-        });
-        return data?YES:NO;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                H5GGApplyFloatButtonImageData(data);
+            });
+        }];
+        [task resume];
+        return YES;
     }];
-    
+
     [floatH5 setAction:@"setButtonAction" callback:^{
         PGVSharedData->customButtonAction = YES;
     }];
@@ -328,7 +434,7 @@ FloatMenu* initFloatMenu(UIWindow* win)
         PGVSharedData->touchableAll = floatH5.touchableAll;
         PGVSharedData->touchableRect = floatH5.touchableRect;
         dispatch_async(dispatch_get_main_queue(), ^{
-            floatH5.userInteractionEnabled = floatH5.touchableAll;
+            floatH5.userInteractionEnabled = YES;
         });
     }];
     
@@ -362,13 +468,13 @@ FloatMenu* initFloatMenu(UIWindow* win)
     
     /* 三种加载方式任选其一 */
 
-    NSString* htmlstub = [NSString stringWithUTF8String:(char*)gH5MENU_STUB_FILEData];
-    NSLog(@"html stub hash=%p", [htmlstub hash]);
+    NSString* htmlstub = H5GGStubString(gH5MENU_STUB_FILEData);
+    NSLog(@"html stub marker=%@", htmlstub);
     
     //ipa的.app目录中的H5文件名
     NSString* h5file = [[NSBundle mainBundle] pathForResource:@"H5Menu" ofType:@"html"];
     
-    if([htmlstub hash] != 0xc25ce928da0ca2de) {
+    if(H5GGHasEmbeddedMenuStub()) {
         //第一优先级: 从网址加载H5
         if([[htmlstub lowercaseString] hasPrefix:@"http"])
             [floatH5 loadRequest:[[NSURLRequest alloc] initWithURL:[NSURL URLWithString:htmlstub]]];
@@ -436,7 +542,11 @@ void showFloatWindowContinue(bool show)
          });
     } else {
         [floatWindow setHidden:YES]; //floatWindow可能已经成为keyWindow, hidden之后系统会指定新的keyWindow
-        [UIApplication.sharedApplication.keyWindow addSubview:floatBtn]; //floatWindow hidden之后再调用否则图标闪烁
+        UIWindow *targetWindow = H5GGMainApplicationWindow();
+        if (!targetWindow) {
+            targetWindow = H5GGPreferredWindow(nil);
+        }
+        [targetWindow addSubview:floatBtn]; //floatWindow hidden之后再调用否则图标闪烁
         //floatBtn.keepFront = YES;
     }
 }
@@ -445,9 +555,7 @@ void showFloatWindow(bool show)
 {
     if(!floatWindow)
     {
-        SCNetworkReachabilityFlags flags;
-        SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, "www.baidu.com");
-        if(!SCNetworkReachabilityGetFlags(reachability, &flags) || (flags & kSCNetworkReachabilityFlagsReachable)==0)
+        if(!H5GGHasNetworkRoute())
         {
             if(floatBtn) {
                 floatBtn.keepFront = NO;
@@ -474,7 +582,6 @@ void showFloatWindow(bool show)
             
             return;
         }
-        CFRelease(reachability);
     }
     
     showFloatWindowContinue(show);
@@ -483,7 +590,7 @@ void showFloatWindow(bool show)
 void initFloatButton(void (^callback)(void))
 {
     //获取窗口
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    UIWindow *window = H5GGMainApplicationWindow() ?: H5GGPreferredWindow(nil);
     
     //创建悬浮按钮
     floatBtn = [[FloatButton alloc] init];
@@ -493,19 +600,18 @@ void initFloatButton(void (^callback)(void))
     
     UIImage* iconImage=nil;
     
-    NSString* iconstub = [NSString stringWithUTF8String:(char*)gH5ICON_STUB_FILEData];
-    NSLog(@"icon stub hash=%p", [iconstub hash]);
+    NSLog(@"icon stub marker=%@", H5GGStubString(gH5ICON_STUB_FILEData));
     
     //ipa的.app目录中的图标文件名
     NSString* iconfile = [[NSBundle mainBundle] pathForResource:@"H5Icon" ofType:@"png"];
     
-    if([iconstub hash] != 0x1fdd7fff7d401bd2) {
+    if(H5GGHasEmbeddedIconStub()) {
         //第一优先级:
         NSData* iconData = [[NSData alloc] initWithBytes:gH5ICON_STUB_FILEData length:gH5ICON_STUB_FILESize];
         iconImage = [[UIImage alloc] initWithData:iconData];
     } else if([[NSFileManager defaultManager] fileExistsAtPath:iconfile]) {
         //第二优先级: 从文件加载图标
-        iconImage = [UIImage imageNamed:iconfile];
+        iconImage = [UIImage imageWithContentsOfFile:iconfile];
     } else {
         //第三优先级: 从dylib加载图标
         NSData* iconData = [[NSData alloc] initWithBytes:gIconData length:gIconSize];
@@ -522,30 +628,66 @@ void initFloatButton(void (^callback)(void))
     [window addSubview:floatBtn];
 }
 
+// void initload()
+// {
+//     if(g_standalone_runmode)
+//     {
+//         appWindow = H5GGMainApplicationWindow() ?: H5GGPreferredWindow(nil);
+//     }
+    
+//     NSString* app_package = [[NSBundle mainBundle] bundleIdentifier];
+    
+//     if([app_package isEqualToString:@"com.test.h5gg"] && !H5GGHasEmbeddedMenuStub()) {
+//         [TopShow alert:@"风险提示" message:@"建议卸载通用版, 使用跨进程版."];
+//     }
+    
+//     if(g_standalone_runmode) {
+//         showFloatWindow(true); //直接加载悬浮按钮和悬浮窗口
+        
+//         if(NSBundle.mainBundle.infoDictionary[@"UIRequiresFullScreen"])
+//         {
+//             if(!PGVSharedData->enable)
+//                 [TopShow alert:Localized(@"悬浮模块加载失败") message:Localized(@"请检查你的越狱基板是否安装并启用, 也可能被其他插件禁用或干扰!")];
+//         }
+        
+//     } else {
+//         //三方app中第一次点击图标时再加载H5菜单,防止部分APP不兼容H5导致闪退卡死
+//          initFloatButton(^(void) {
+//              if(floatH5 && floatH5.buttonCallbackRegistered) {
+//                  [floatH5 invokeButtonCallback];
+//              } else {
+//                  bool show = floatWindow ? floatWindow.isHidden : YES;
+//                  NSLog(@"ButtonShowWindow=%d", show);
+//                  showFloatWindow(show);
+//              }
+//          });
+        
+//     }
+// }
+
 void initload()
 {
-    if(g_standalone_runmode)
-    {
-        appWindow = UIApplication.sharedApplication.keyWindow;
-    }
+    // if(g_standalone_runmode)
+    // {
+    //     appWindow = H5GGMainApplicationWindow() ?: H5GGPreferredWindow(nil);
+    // }
     
-    NSString* app_package = [[NSBundle mainBundle] bundleIdentifier];
+    // NSString* app_package = [[NSBundle mainBundle] bundleIdentifier];
     
-    NSString* htmlstub = [NSString stringWithUTF8String:(char*)gH5MENU_STUB_FILEData];
-    if(app_package.hash==0xccca3dc699edf771 && [htmlstub hash]==0xc25ce928da0ca2de) {
-        [TopShow alert:@"风险提示" message:@"建议卸载通用版, 使用跨进程版."];
-    }
+    // if([app_package isEqualToString:@"com.test.h5gg"] && !H5GGHasEmbeddedMenuStub()) {
+    //     [TopShow alert:@"风险提示" message:@"建议卸载通用版, 使用跨进程版."];
+    // }
     
-    if(g_standalone_runmode) {
-        showFloatWindow(true); //直接加载悬浮按钮和悬浮窗口
+    // if(g_standalone_runmode) {
+    //     showFloatWindow(true); //直接加载悬浮按钮和悬浮窗口
         
-        if(NSBundle.mainBundle.infoDictionary[@"UIRequiresFullScreen"])
-        {
-            if(!PGVSharedData->enable)
-                [TopShow alert:Localized(@"悬浮模块加载失败") message:Localized(@"请检查你的越狱基板是否安装并启用, 也可能被其他插件禁用或干扰!")];
-        }
-        
-    } else {
+    //     if(NSBundle.mainBundle.infoDictionary[@"UIRequiresFullScreen"])
+    //     {
+    //         if(!PGVSharedData->enable)
+    //             [TopShow alert:Localized(@"悬浮模块加载失败") message:Localized(@"请检查你的越狱基板是否安装并启用, 也可能被其他插件禁用或干扰!")];
+    //     }
+        H5GGMainApplicationWindow(); //提前获取主窗口, 避免后面某些APP主窗口被意外隐藏了
+    // } else {
         //三方app中第一次点击图标时再加载H5菜单,防止部分APP不兼容H5导致闪退卡死
          initFloatButton(^(void) {
              if(floatH5 && floatH5.buttonCallbackRegistered) {
@@ -557,9 +699,8 @@ void initload()
              }
          });
         
-    }
+    // }
 }
-
 
 static void* thread_running(void* arg)
 {
@@ -570,7 +711,7 @@ static void* thread_running(void* arg)
     dispatch_async(dispatch_get_main_queue(), ^{
         __block NSTimer* timer = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer*t){
             
-            if(UIApplication.sharedApplication && UIApplication.sharedApplication.keyWindow) {
+            if(UIApplication.sharedApplication && H5GGPreferredWindow(nil)) {
                 [timer invalidate];
                 initload();
             }
@@ -625,9 +766,7 @@ static void __attribute__((constructor)) _init_()
     //判断是普通版还是跨进程版, 防止混用
     if(g_standalone_runmode && g_dylib_runmode)
     {
-        NSString* plistPath = [NSString stringWithUTF8String:di.dli_fname];
-        char* p = (char*)plistPath.UTF8String + strlen(di.dli_fname) - 5;
-        strcpy(p, "plist");
+        NSString* plistPath = [[[NSString stringWithUTF8String:di.dli_fname] stringByDeletingPathExtension] stringByAppendingPathExtension:@"plist"];
         
         NSDictionary* plist = [[NSDictionary alloc] initWithContentsOfFile:plistPath];
         NSLog(@"plist=%@\n%@\n%@\n%@", plistPath, plist, plist[@"Filter"], plist[@"Filter"][@"Bundles"]);

@@ -421,6 +421,105 @@ static inline int jj_type_size(int type)
     }
 }
 
+static inline size_t jj_utf16_cstr_bytes(const uint16_t *value)
+{
+    if (!value)
+        return 0;
+
+    size_t chars = 0;
+    while (value[chars] != 0)
+        chars++;
+
+    return (chars + 1) * sizeof(uint16_t);
+}
+
+static inline size_t jj_value_size(const void *value, int type)
+{
+    switch (type)
+    {
+        case JJ_Search_Type_CString:
+            return value ? (strlen((const char *)value) + 1) : 0;
+        case JJ_Search_Type_UTF16:
+            return jj_utf16_cstr_bytes((const uint16_t *)value);
+        default:
+            return jj_type_size(type);
+    }
+}
+
+static inline bool jj_numeric_match(
+    uint64_t pos, uint64_t low, uint64_t high,
+    void* target, int type, float tol)
+{
+    if (pos < low || pos + jj_type_size(type) > high)
+        return false;
+
+    switch (type)
+    {
+        case JJ_Search_Type_Float:
+        {
+            float v = *(float*)pos;
+            float t = *(float*)target;
+            return (v >= t - tol && v <= t + tol);
+        }
+
+        case JJ_Search_Type_Double:
+        {
+            double v = *(double*)pos;
+            double t = *(double*)target;
+            return (v >= t - tol && v <= t + tol);
+        }
+
+        case JJ_Search_Type_SByte:
+            return (*(int8_t*)pos == *(int8_t*)target);
+
+        case JJ_Search_Type_UByte:
+            return (*(uint8_t*)pos == *(uint8_t*)target);
+
+        case JJ_Search_Type_SShort:
+            return (*(int16_t*)pos == *(int16_t*)target);
+
+        case JJ_Search_Type_UShort:
+            return (*(uint16_t*)pos == *(uint16_t*)target);
+
+        case JJ_Search_Type_SInt:
+            return (*(int32_t*)pos == *(int32_t*)target);
+
+        case JJ_Search_Type_UInt:
+            return (*(uint32_t*)pos == *(uint32_t*)target);
+
+        case JJ_Search_Type_SLong:
+            return (*(int64_t*)pos == *(int64_t*)target);
+
+        case JJ_Search_Type_ULong:
+            return (*(uint64_t*)pos == *(uint64_t*)target);
+    }
+
+    return false;
+}
+
+static inline bool jj_string_match(
+    uint64_t pos, uint64_t low, uint64_t high,
+    void* target, int type)
+{
+    if (type == JJ_Search_Type_CString)
+    {
+        size_t len = jj_value_size(target, type);
+        if (len == 0 || pos < low || pos + len > high)
+            return false;
+        return memcmp((const void*)pos, target, len - 1) == 0;
+    }
+
+    if (type == JJ_Search_Type_UTF16)
+    {
+        size_t len = jj_value_size(target, type);
+        if (len == 0 || pos < low || pos + len > high)
+            return false;
+        return memcmp((const void*)pos, target, len - sizeof(uint16_t)) == 0;
+    }
+
+    return false;
+}
+
 
 // ============================================================================
 // Unified Scanner Class (SIMD + Numeric)
@@ -636,7 +735,7 @@ public:
     // ------------------------------------------------------------------------
     bool JJReadMemory(void* buf, uint64_t addr, int type)
     {
-        int len = jj_type_size(type);
+        size_t len = jj_type_size(type);
         if (len <= 0)
             return false;
 
@@ -648,7 +747,7 @@ public:
 
     bool JJWriteMemory(void* address, void* src, int type)
     {
-        int len = jj_type_size(type);
+        size_t len = jj_value_size(src, type);
         if (len <= 0)
             return false;
 
@@ -666,19 +765,25 @@ public:
         if (kr != KERN_SUCCESS)
             return false;
 
-        vm_address_t base = 0;
+        mach_vm_address_t protectBase = 0;
+        mach_vm_size_t protectSize = 0;
 
         if (!(info.protection & VM_PROT_WRITE))
         {
-            base = ((uint64_t)address) & ~PAGE_MASK;
-            kr = mach_vm_protect(task, base, PAGE_SIZE, false,
+            uint64_t startAddr = (uint64_t)address;
+            uint64_t endAddr = startAddr + len - 1;
+            protectBase = startAddr & ~((uint64_t)PAGE_MASK);
+            uint64_t protectEnd = (endAddr & ~((uint64_t)PAGE_MASK)) + PAGE_SIZE;
+            protectSize = protectEnd - protectBase;
+
+            kr = mach_vm_protect(task, protectBase, protectSize, false,
                                  info.protection |
                                  VM_PROT_WRITE |
                                  VM_PROT_COPY);
 
             if (kr != KERN_SUCCESS)
             {
-                kr = mach_vm_protect(task, base, PAGE_SIZE, false,
+                kr = mach_vm_protect(task, protectBase, protectSize, false,
                                      VM_PROT_READ |
                                      VM_PROT_WRITE |
                                      VM_PROT_COPY);
@@ -690,17 +795,17 @@ public:
         bool ok = (vm_write(task, (vm_address_t)address,
                             (vm_offset_t)src, len) == KERN_SUCCESS);
 
-        if (!ok && base)
+        if (!ok && protectBase)
         {
-            mach_vm_protect(task, base, PAGE_SIZE, false,
+            mach_vm_protect(task, protectBase, protectSize, false,
                             VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
 
             ok = (vm_write(task, (vm_address_t)address,
                            (vm_offset_t)src, len) == KERN_SUCCESS);
         }
 
-        if (base)
-            vm_protect(task, base, PAGE_SIZE, false, info.protection);
+        if (protectBase)
+            mach_vm_protect(task, protectBase, protectSize, false, info.protection);
 
         return ok;
     }
@@ -708,7 +813,7 @@ public:
 
     int JJWriteAll(void* src, int type)
     {
-        int len = jj_type_size(type);
+        size_t len = jj_value_size(src, type);
         if (len <= 0)
             return 0;
 
@@ -721,7 +826,7 @@ public:
             for (uint32_t slide : region->slides)
             {
                 uint64_t addr = region->region_base + slide;
-                if (vm_write(task, addr, (vm_offset_t)src, len) == KERN_SUCCESS)
+                if (JJWriteMemory((void*)addr, src, type))
                     count++;
             }
         }
@@ -786,61 +891,6 @@ public:
 private:
 
     // ------------------------------------------------------------------------
-    // Helper used by JJNearBySearch numeric fallback
-    // ------------------------------------------------------------------------
-    static bool numericMatch(
-        uint64_t pos, uint64_t low, uint64_t high,
-        void* target, int type, float tol)
-    {
-        if (pos < low || pos + jj_type_size(type) > high)
-            return false;
-
-        switch (type)
-        {
-            case JJ_Search_Type_Float:
-            {
-                float v = *(float*)pos;
-                float t = *(float*)target;
-                return (v >= t - tol && v <= t + tol);
-            }
-
-            case JJ_Search_Type_Double:
-            {
-                double v = *(double*)pos;
-                double t = *(double*)target;
-                return (v >= t - tol && v <= t + tol);
-            }
-
-            case JJ_Search_Type_SByte:
-                return (*(int8_t*)pos == *(int8_t*)target);
-
-            case JJ_Search_Type_UByte:
-                return (*(uint8_t*)pos == *(uint8_t*)target);
-
-            case JJ_Search_Type_SShort:
-                return (*(int16_t*)pos == *(int16_t*)target);
-
-            case JJ_Search_Type_UShort:
-                return (*(uint16_t*)pos == *(uint16_t*)target);
-
-            case JJ_Search_Type_SInt:
-                return (*(int32_t*)pos == *(int32_t*)target);
-
-            case JJ_Search_Type_UInt:
-                return (*(uint32_t*)pos == *(uint32_t*)target);
-
-            case JJ_Search_Type_SLong:
-                return (*(int64_t*)pos == *(int64_t*)target);
-
-            case JJ_Search_Type_ULong:
-                return (*(uint64_t*)pos == *(uint64_t*)target);
-        }
-
-        return false;
-    }
-
-
-    // ------------------------------------------------------------------------
     // Free all results
     // ------------------------------------------------------------------------
     void freeResults()
@@ -879,14 +929,14 @@ public:
 
         uint64_t stackSize = pthread_get_stacksize_np(pthread_self());
         uint64_t stackAddr = (uint64_t)pthread_get_stackaddr_np(pthread_self());
-        uint64_t stackEnd  = stackAddr + stackSize;
+        uint64_t stackBase = stackAddr > stackSize ? (stackAddr - stackSize) : 0;
 
         auto regions = jj_enumerate_regions(
             engine->task,
             range.start,
             range.end,
-            stackAddr,
-            stackEnd);
+            stackBase,
+            stackAddr);
 
         for (auto& r : regions)
         {
@@ -941,22 +991,49 @@ public:
             }
 
             result_region* newRegion = nullptr;
-
-            for (uint32_t slide : old->slides)
+            if (old->slides.empty())
             {
+                delete old;
+                engine->result->regions[i] = nullptr;
+                continue;
+            }
+
+            for (int slideIndex = 0; slideIndex < old->slides.size(); slideIndex++)
+            {
+                uint32_t slide = old->slides[slideIndex];
                 uint64_t addr = old->region_base + slide;
 
                 if (addr < range.start || addr >= range.end)
                     continue;
 
-                JJScanner::ScanRegion(
-                    newRegion,
-                    map,
-                    old->region_base,
-                    old->region_size,
-                    target,
-                    type,
-                    engine->float_tolerance);
+                bool match = false;
+                if (type == JJ_Search_Type_CString || type == JJ_Search_Type_UTF16)
+                {
+                    match = jj_string_match((uint64_t)map.localPtr + slide,
+                                            (uint64_t)map.localPtr,
+                                            (uint64_t)map.localPtr + old->region_size,
+                                            target,
+                                            type);
+                }
+                else
+                {
+                    match = jj_numeric_match((uint64_t)map.localPtr + slide,
+                                             (uint64_t)map.localPtr,
+                                             (uint64_t)map.localPtr + old->region_size,
+                                             target,
+                                             type,
+                                             engine->float_tolerance);
+                }
+
+                if (!match)
+                    continue;
+
+                if (!newRegion)
+                    newRegion = new result_region(old->region_base, old->region_size);
+
+                newRegion->slides.push_back(slide);
+                if (!old->types.empty() && slideIndex < old->types.size())
+                    newRegion->types.push_back(old->types[slideIndex]);
             }
 
             delete old;
@@ -1072,7 +1149,7 @@ public:
                     }
                     else
                     {
-                        if (numericMatch(pos, data, limit, target, type, float_tolerance))
+                        if (jj_numeric_match(pos, data, limit, target, type, float_tolerance))
                             found = pos;
                     }
 
